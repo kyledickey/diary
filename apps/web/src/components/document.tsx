@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { EyeIcon, EyeOffIcon, Trash2Icon } from "lucide-react";
 import ms from "ms";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
     documentKeys,
@@ -54,14 +54,15 @@ export default function DocumentEditor({ document }: DocumentEditorProps) {
     const track = useAnalytics();
     const updateDocument = useUpdateDocumentMutation(document.id);
     const initialDraft = useMemo(() => toDraft(document), [document]);
-    const lastSaved = useRef(initialDraft);
+    const [lastSaved, setLastSaved] = useState(initialDraft);
     const [draft, setDraft] = useState(initialDraft);
+    const [saveAttempt, setSaveAttempt] = useState(0);
     const [updatedAt, setUpdatedAt] = useState(document.updated_at);
     const [isBlurred, setIsBlurred] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [, forceClockUpdate] = useState(0);
 
-    const changes = useMemo(() => getChanges(lastSaved.current, draft), [draft]);
+    const changes = useMemo(() => getChanges(lastSaved, draft), [draft, lastSaved]);
     const isDirty = Object.keys(changes).length > 0;
 
     useEffect(() => {
@@ -69,20 +70,25 @@ export default function DocumentEditor({ document }: DocumentEditorProps) {
             return;
         }
 
-        const timer = window.setTimeout(async () => {
-            try {
-                const { document: saved } = await updateDocument.mutateAsync(changes);
-                lastSaved.current = toDraft(saved);
-                setUpdatedAt(saved.updated_at);
-            } catch (error) {
-                toast.error("Error saving document", {
-                    description: error instanceof Error ? error.message : "Please try again."
-                });
-            }
-        }, 650);
+        const timer = window.setTimeout(
+            async () => {
+                try {
+                    const { document: saved } = await updateDocument.mutateAsync(changes);
+                    setLastSaved(toDraft(saved));
+                    setSaveAttempt(0);
+                    setUpdatedAt(saved.updated_at);
+                } catch (error) {
+                    setSaveAttempt((attempt) => attempt + 1);
+                    toast.error("Error saving document", {
+                        description: error instanceof Error ? error.message : "Please try again."
+                    });
+                }
+            },
+            Math.min(650 * 2 ** saveAttempt, 10_000)
+        );
 
         return () => window.clearTimeout(timer);
-    }, [changes, isDirty, updateDocument.mutateAsync]);
+    }, [changes, isDirty, saveAttempt, updateDocument.mutateAsync]);
 
     useEffect(() => {
         const timer = window.setInterval(() => forceClockUpdate((value) => value + 1), 30_000);

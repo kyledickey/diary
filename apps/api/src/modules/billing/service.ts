@@ -35,29 +35,31 @@ export class BillingService {
 
     async provisionFreePlan(userId: string, email: string): Promise<string> {
         const existing = await this.users.find(userId);
-        if (existing?.stripe_customer_id) {
-            return existing.stripe_customer_id;
-        }
-
-        const customer = await this.stripe.customers.create(
-            {
-                email,
-                metadata: { clerkUserId: userId }
-            },
-            { idempotencyKey: `diary-customer-${userId}` }
-        );
+        const customerId =
+            existing?.stripe_customer_id ??
+            (
+                await this.stripe.customers.create(
+                    {
+                        email,
+                        metadata: { clerkUserId: userId }
+                    },
+                    { idempotencyKey: `diary-customer-${userId}` }
+                )
+            ).id;
 
         await this.stripe.subscriptions.create(
             {
-                customer: customer.id,
+                customer: customerId,
                 items: [{ price: this.config.freePriceId, quantity: 1 }]
             },
             { idempotencyKey: `diary-free-subscription-${userId}` }
         );
 
-        await this.users.setStripeCustomerId(userId, customer.id);
-        await this.auth.updateBillingMetadata(userId, customer.id, "free");
-        return customer.id;
+        if (!existing?.stripe_customer_id) {
+            await this.users.setStripeCustomerId(userId, customerId);
+        }
+        await this.auth.updateBillingMetadata(userId, customerId, "free");
+        return customerId;
     }
 
     async deleteCustomer(customerId: string): Promise<void> {

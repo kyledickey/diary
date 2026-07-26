@@ -1,6 +1,6 @@
 import type { Document, DocumentMetadata, DocumentSummary } from "@diary/contracts";
 import { type Database, documents } from "@diary/database";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 export interface DocumentChanges {
     content?: string;
@@ -13,9 +13,9 @@ export interface DocumentStore {
     list(ownerId: string): Promise<DocumentSummary[]>;
     find(ownerId: string, id: string): Promise<Document | null>;
     create(document: Document): Promise<Document>;
+    createForFreePlan(document: Document, timestamp: number): Promise<Document | null>;
     update(ownerId: string, id: string, changes: DocumentChanges): Promise<Document | null>;
     delete(ownerId: string, id: string): Promise<boolean>;
-    hasCreatedSince(ownerId: string, timestamp: number): Promise<boolean>;
 }
 
 export class DocumentRepository implements DocumentStore {
@@ -56,6 +56,36 @@ export class DocumentRepository implements DocumentStore {
         return created;
     }
 
+    createForFreePlan(document: Document, timestamp: number): Promise<Document | null> {
+        return this.db.transaction(async (transaction) => {
+            await transaction.execute(
+                sql`select pg_advisory_xact_lock(hashtextextended(${document.owner_id}, 0))`
+            );
+
+            const [existing] = await transaction
+                .select({ id: documents.id })
+                .from(documents)
+                .where(
+                    and(
+                        eq(documents.owner_id, document.owner_id),
+                        gte(documents.created_at, timestamp)
+                    )
+                )
+                .limit(1);
+
+            if (existing) {
+                return null;
+            }
+
+            const [created] = await transaction.insert(documents).values(document).returning();
+            if (!created) {
+                throw new Error("Database did not return the created document");
+            }
+
+            return created;
+        });
+    }
+
     async update(ownerId: string, id: string, changes: DocumentChanges): Promise<Document | null> {
         const [updated] = await this.db
             .update(documents)
@@ -73,15 +103,5 @@ export class DocumentRepository implements DocumentStore {
             .returning({ id: documents.id });
 
         return deleted.length === 1;
-    }
-
-    async hasCreatedSince(ownerId: string, timestamp: number): Promise<boolean> {
-        const [document] = await this.db
-            .select({ id: documents.id })
-            .from(documents)
-            .where(and(eq(documents.owner_id, ownerId), gte(documents.created_at, timestamp)))
-            .limit(1);
-
-        return document !== undefined;
     }
 }

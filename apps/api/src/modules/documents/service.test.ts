@@ -28,6 +28,16 @@ class MemoryDocumentStore implements DocumentStore {
         return Promise.resolve(document);
     }
 
+    createForFreePlan(document: Document): Promise<Document | null> {
+        if (this.hasRecentDocument) {
+            return Promise.resolve(null);
+        }
+
+        this.hasRecentDocument = true;
+        this.documents.set(document.id, document);
+        return Promise.resolve(document);
+    }
+
     update(ownerId: string, id: string, changes: DocumentChanges): Promise<Document | null> {
         this.updateCalls += 1;
         const existing = this.documents.get(id);
@@ -43,10 +53,6 @@ class MemoryDocumentStore implements DocumentStore {
     delete(ownerId: string, id: string): Promise<boolean> {
         const existing = this.documents.get(id);
         return Promise.resolve(existing?.owner_id === ownerId && this.documents.delete(id));
-    }
-
-    hasCreatedSince(): Promise<boolean> {
-        return Promise.resolve(this.hasRecentDocument);
     }
 }
 

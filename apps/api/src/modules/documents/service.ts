@@ -32,17 +32,8 @@ export class DocumentService {
     }
 
     async create(ownerId: string, request: CreateDocumentRequest, plan: Plan): Promise<Document> {
-        if (plan === "free") {
-            const localDayStart = this.getLocalDayStart(request.timezoneOffsetMinutes);
-            const alreadyCreated = await this.repository.hasCreatedSince(ownerId, localDayStart);
-
-            if (alreadyCreated) {
-                throw new AppError(409, "CONFLICT", "You have already created an entry today");
-            }
-        }
-
         const now = Math.floor(Date.now() / 1000);
-        return this.repository.create({
+        const document = {
             id: randomUUID(),
             owner_id: ownerId,
             title: request.title,
@@ -50,7 +41,19 @@ export class DocumentService {
             created_at: now,
             updated_at: now,
             metadata: defaultDocumentMetadata
-        });
+        };
+
+        if (plan === "plus") {
+            return this.repository.create(document);
+        }
+
+        const localDayStart = this.getLocalDayStart(request.timezoneOffsetMinutes);
+        const created = await this.repository.createForFreePlan(document, localDayStart);
+        if (!created) {
+            throw new AppError(409, "CONFLICT", "You have already created an entry today");
+        }
+
+        return created;
     }
 
     async update(
