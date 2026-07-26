@@ -1,37 +1,38 @@
-import { Elysia } from "elysia";
-import { cors } from "@elysiajs/cors";
-import config from "../config";
-import { logger } from "@grotto/logysia";
-import { clerkPlugin } from "elysia-clerk";
+import { createDatabase } from "@diary/database";
+import { createApp } from "./app";
+import { loadEnv } from "./config/env";
+import { DocumentCipher } from "./lib/cipher";
+import { logger } from "./lib/logger";
+import { AuthService } from "./modules/auth/service";
+import { BillingService } from "./modules/billing/service";
+import { DocumentRepository } from "./modules/documents/repository";
+import { DocumentService } from "./modules/documents/service";
+import { UserRepository } from "./modules/users/repository";
+import { UserService } from "./modules/users/service";
 
-// import routes
-import auth from "./routes/auth";
-import docs from "./routes/documents";
-import stripe from "./routes/stripe";
-
-const app = new Elysia();
-
-// Middleware
-app.use(cors());
-app.use(
-    clerkPlugin({
-        publishableKey: config.clerk.publishableKey,
-        secretKey: config.clerk.secretKey
-    })
-);
-app.use(
-    logger({
-        logIP: false
-    })
+const env = loadEnv();
+const { db } = createDatabase(env.databaseUrl);
+const auth = new AuthService(env.clerk);
+const users = new UserService(new UserRepository(db));
+const billing = new BillingService(env.stripe, env.webUrl, auth, users);
+const documents = new DocumentService(
+    new DocumentRepository(db),
+    new DocumentCipher(env.encryptionKey)
 );
 
-// Routes
-app.get("/", () => {
-    return { message: "hey" };
+const app = createApp({
+    env,
+    logger,
+    auth,
+    documents,
+    billing,
+    users
 });
-app.use(auth); // /auth/*
-app.use(docs); // /documents/*
-app.use(stripe); // /stripe/*
 
-app.listen(config.port);
-console.log(`Server running on port ${config.port}`);
+app.listen(env.port);
+logger.info("Diary API started", {
+    port: env.port,
+    environment: env.nodeEnv
+});
+
+export type App = typeof app;
