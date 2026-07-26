@@ -1,6 +1,6 @@
 # Privacy Policy
 
-> Last updated: June 2, 2024
+> Last updated: July 25, 2026
 
 Diary ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains
 how we collect, use, disclose, and safeguard your information when you use our digital journaling
@@ -43,7 +43,7 @@ Users have the following rights regarding their data:
 
 ## 6. Cookies and Tracking
 
-We use Plausible for anonymous analytics tracking to understand how users interact with the
+We use visitors.now for anonymous analytics tracking to understand how users interact with the
 platform.
 
 ## 7. Third-Party Services
@@ -51,7 +51,7 @@ platform.
 We use the following third-party services:
 
 -   **Stripe:** For payment processing ([Stripe Privacy Policy](https://stripe.com/privacy)).
--   **Plausible:** For analytics ([Plausible Privacy Policy](https://plausible.io/privacy)).
+-   **visitors.now:** For analytics ([Visitors Privacy Policy](https://visitors.now/privacy)).
 -   **Clerk:** For authentication ([Clerk Privacy Policy](https://clerk.com/privacy)).
 
 ## 8. Data Retention

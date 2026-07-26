@@ -16,19 +16,24 @@ export type AnalyticsEvent =
     | "home_page_portfolio_link_click"
     | "sign_out";
 
+type AnalyticsProperties = Record<string, string | number>;
+
 declare global {
     interface Window {
-        plausible?: (
-            event: AnalyticsEvent,
-            options?: { props?: Record<string, string | number | boolean> }
-        ) => void;
+        visitors?: {
+            track: (event: AnalyticsEvent, properties?: AnalyticsProperties) => void;
+        };
     }
 }
 
-export function trackAnalytics(event: AnalyticsEvent) {
-    window.plausible?.(event);
+export function trackAnalytics(event: AnalyticsEvent, properties?: AnalyticsProperties) {
+    window.visitors?.track(event, properties);
 }
 
 export function useAnalytics() {
-    return useCallback((event: AnalyticsEvent) => trackAnalytics(event), []);
+    return useCallback(
+        (event: AnalyticsEvent, properties?: AnalyticsProperties) =>
+            trackAnalytics(event, properties),
+        []
+    );
 }

@@ -65,9 +65,9 @@ export const Route = createRootRoute({
         ],
         scripts: [
             {
-                src: "https://a.kyle.so/js/script.tagged-events.js",
+                src: "https://cdn.visitors.now/v.js",
                 defer: true,
-                "data-domain": "diary.kyle.so"
+                "data-token": "25bc8e07-7b58-4933-bbe4-c034225831f7"
             }
         ]
     }),
