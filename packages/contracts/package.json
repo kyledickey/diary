@@ -1,0 +1,20 @@
+{
+    "name": "@diary/contracts",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "build": "tsc --project tsconfig.json",
+        "check": "tsc --project tsconfig.json",
+        "test": "bun test --pass-with-no-tests"
+    },
+    "dependencies": {
+        "zod": "4.4.3"
+    },
+    "devDependencies": {
+        "typescript": "7.0.2"
+    }
+}

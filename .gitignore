@@ -1,47 +1,29 @@
-node_modules
-.next
+node_modules/
+.turbo/
 
-apps/web/node_modules
-apps/web/.next
-app/web/next-env.d.ts
-apps/api/node_modules
-apps/api/.env.local
+# Build output
+.output/
+dist/
+coverage/
 
+# Local environment
+.env
 .env.*
-.env.local
+!.env.example
+!**/.env.example
 
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
+# Tooling
+*.tsbuildinfo
+.cache/
+.vercel/
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-/apps/.DS_Store
-/apps/web/.DS_Store
-/apps/api/.DS_Store
+# OS and editor files
 .DS_Store
+.idea/
+.vscode/

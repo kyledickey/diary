@@ -1,0 +1,63 @@
+name: diary
+
+services:
+    infra:
+        build:
+            context: .
+            dockerfile: infra/Dockerfile
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-diary}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+            POSTGRES_USER: ${POSTGRES_USER:-diary}
+        ports:
+            - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+        restart: unless-stopped
+        volumes:
+            - postgres-data:/var/lib/postgresql
+
+    api:
+        build:
+            context: .
+            dockerfile: apps/api/Dockerfile
+        depends_on:
+            infra:
+                condition: service_healthy
+        environment:
+            CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?Set CLERK_PUBLISHABLE_KEY in .env}
+            CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY in .env}
+            CLERK_WEBHOOK_SIGNING_SECRET: ${CLERK_WEBHOOK_SIGNING_SECRET:?Set CLERK_WEBHOOK_SIGNING_SECRET in .env}
+            DB_URL: postgresql://${POSTGRES_USER:-diary}:${POSTGRES_PASSWORD}@infra:5432/${POSTGRES_DB:-diary}
+            ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+            NODE_ENV: production
+            PORT: 8080
+            STRIPE_FREE_PRICE_ID: ${STRIPE_FREE_PRICE_ID:?Set STRIPE_FREE_PRICE_ID in .env}
+            STRIPE_PLUS_PRICE_ID: ${STRIPE_PLUS_PRICE_ID:?Set STRIPE_PLUS_PRICE_ID in .env}
+            STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?Set STRIPE_SECRET_KEY in .env}
+            STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?Set STRIPE_WEBHOOK_SECRET in .env}
+            WEB_URL: ${WEB_URL:-http://localhost:3000}
+        init: true
+        ports:
+            - "${API_PORT:-8080}:8080"
+        restart: unless-stopped
+
+    web:
+        build:
+            context: .
+            dockerfile: apps/web/Dockerfile
+            args:
+                VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+                VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY in .env}
+        depends_on:
+            api:
+                condition: service_healthy
+        environment:
+            CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY in .env}
+            NODE_ENV: production
+            PORT: 3000
+        init: true
+        ports:
+            - "${WEB_PORT:-3000}:3000"
+        restart: unless-stopped
+
+volumes:
+    postgres-data:

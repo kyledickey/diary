@@ -1,6 +1,40 @@
 # Changelog
 
-See also: [Web version](https://diary.kyle.so/changelog)
+## [v1.0.0](https://github.com/kyledickey/diary/releases/tag/v1.0.0) - July 25, 2026
+
+### Added
+
+-   Add shared contracts and database packages for consistent validation and
+    types across the web app and API.
+-   Add Docker images, a local Docker Compose stack, and Railway deployment
+    configuration for the web app, API, and PostgreSQL.
+-   Add automated tests for document encryption, document access, and billing.
+
+### Changed
+
+-   Migrate the web app from Next.js to TanStack Start and React while
+    preserving the existing Diary experience.
+-   Move browser API interactions to TanStack Query with shared Zod contracts.
+-   Rebuild the API around focused authentication, user, document, billing, and
+    webhook modules with structured errors.
+-   Consolidate development into a Bun and Turbo monorepo with one lockfile,
+    shared TypeScript configuration, and root workspace commands.
+-   Redesign the landing page and move analytics to Visitors.now.
+-   Standardize local ports on `3000` for the web app, `8080` for the API, and
+    `5432` for PostgreSQL.
+
+### Security
+
+-   Scope document access and mutations to the authenticated owner.
+-   Encrypt new entry content with AES-256-GCM and automatically upgrade legacy
+    AES-256-CBC content when it is saved.
+-   Create Stripe billing portal sessions from the authenticated user's stored
+    customer ID.
+
+### Removed
+
+-   Remove the abandoned mobile app.
+-   Remove LogSnag and the obsolete Fly.io deployment configuration.
 
 ## [v0.2.7-beta](https://github.com/dickeyy/diary/releases/tag/v0.2.7-beta) - July 27, 2024
 
@@ -33,7 +67,6 @@ See also: [Web version](https://diary.kyle.so/changelog)
     ([`9684521`](https://github.com/dickeyy/diary/commit/9684521))
 -   Add some animations on the home page.
     ([`307ca3b`](https://github.com/dickeyy/diary/commit/307ca3b))
--   Add configuration for [Fly.io](https://fly.io), for API hosting.
     [`69268ee`](https://github.com/dickeyy/diary/commit/69268ee)
 
 ### Changed
@@ -50,9 +83,7 @@ See also: [Web version](https://diary.kyle.so/changelog)
 
 ### Added
 
--   Add [LogSnag](https://logsnag.com/) for easy insights.
-    ([`ea15dde`](https://github.com/dickeyy/diary/commit/ea15dde))
--   Add a feedback dialog and form utilizing LogSnag.
+-   Add a feedback dialog and form.
     ([`fbf9e6f`](https://github.com/dickeyy/diary/commit/fbf9e6f))
     ([`46029e7`](https://github.com/dickeyy/diary/commit/46029e7))
 -   Add a PostHog event for feedback submission.

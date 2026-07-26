@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --font-sans: "Inter Variable", sans-serif;
+        --font-serif: "Averia Serif Libre", serif;
+        --font-mono: "JetBrains Mono Variable", monospace;
+
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
+
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 10% 3.9%;
+
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 0 0% 11%;
+        --foreground: 0 0% 98%;
+
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+@layer base {
+    .glass-blur::before {
+        backdrop-filter: blur(5px) contrast(100%);
+        -webkit-backdrop-filter: blur(5px) contrast(100%);
+    }
+    .glass-blur {
+        backdrop-filter: blur(5px) contrast(100%);
+        -webkit-backdrop-filter: blur(5px) contrast(100%);
+    }
+}
+
+/* Blog */
+.blog-content {
+    @apply text-foreground/80 flex flex-col gap-3;
+}
+
+.blog-content > h1 {
+    @apply text-foreground font-serif text-4xl font-bold;
+}
+
+.blog-content > h2 {
+    @apply text-foreground mt-4 font-serif text-2xl font-bold;
+}
+
+.blog-content > h3 {
+    @apply text-foreground font-serif text-xl font-bold;
+}
+
+.blog-content > ol {
+    @apply list-inside list-decimal;
+}
+
+.blog-content > ul {
+    @apply list-inside list-disc;
+}
+
+.blog-content > pre {
+    @apply bg-foreground/10 text-card-foreground rounded-lg border p-3 text-sm shadow-sm;
+}
+
+.blog-content > pre > code {
+    @apply block;
+}
+
+.blog-content > p > code {
+    @apply bg-foreground/10 text-card-foreground rounded-[0.3rem] border px-1 text-sm;
+}
+
+.blog-content > ul > li > code {
+    @apply bg-foreground/10 text-card-foreground rounded-[0.3rem] border px-1 text-sm;
+}
+
+.blog-content > p {
+    @apply text-foreground/80;
+}
+
+.blog-content > blockquote {
+    @apply border-primary/40 border-l-2 p-2;
+}
+
+.blog-content > blockquote > p {
+    @apply text-foreground/60 italic;
+}
+
+.blog-content > p > a {
+    @apply text-primary/60 hover:text-primary underline transition-all duration-150 ease-in-out;
+}
+
+.blog-content > p > img {
+    @apply h-auto w-full items-center justify-center rounded-lg shadow-sm;
+}
+
+.blog-content > p > img + figcaption {
+    @apply text-muted/60 text-center text-sm;
+}
+
+.blog-content > hr {
+    @apply border-primary/10 mt-4;
+}
+
+.blog-content > strong {
+    @apply text-foreground;
+}
+
+.blog-content > ul > li > strong {
+    @apply text-foreground;
+}
+
+.blog-content > ul > li > a {
+    @apply text-primary/60 hover:text-primary underline transition-all duration-150 ease-in-out;
+}
+
+.blog-content > h2 > a {
+    @apply text-primary hover:text-primary transition-all duration-150 ease-in-out hover:underline;
+}
+
+.blog-content > ul > li > a > code {
+    @apply bg-foreground/10 text-card-foreground/80 hover:text-foreground rounded-[0.3rem] border px-1 font-mono text-[14px];
+}
