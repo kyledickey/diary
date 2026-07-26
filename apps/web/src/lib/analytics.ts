@@ -13,7 +13,10 @@ export type AnalyticsEvent =
     | "footer_terms_click"
     | "footer_twitter_link_click"
     | "home_page_authed_redirect"
+    | "home_page_get_started_click"
     | "home_page_portfolio_link_click"
+    | "home_page_pricing_click"
+    | "home_page_sign_in_click"
     | "sign_out";
 
 type AnalyticsProperties = Record<string, string | number>;
