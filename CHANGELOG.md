@@ -50,9 +50,7 @@ See also: [Web version](https://diary.kyle.so/changelog)
 
 ### Added
 
--   Add [LogSnag](https://logsnag.com/) for easy insights.
-    ([`ea15dde`](https://github.com/dickeyy/diary/commit/ea15dde))
--   Add a feedback dialog and form utilizing LogSnag.
+-   Add a feedback dialog and form.
     ([`fbf9e6f`](https://github.com/dickeyy/diary/commit/fbf9e6f))
     ([`46029e7`](https://github.com/dickeyy/diary/commit/46029e7))
 -   Add a PostHog event for feedback submission.

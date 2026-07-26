@@ -1,46 +1,31 @@
-# syntax = docker/dockerfile:1
+# syntax=docker/dockerfile:1
 
-# Adjust BUN_VERSION as desired
-ARG BUN_VERSION=1.1.15
-FROM oven/bun:${BUN_VERSION}-slim as base
-
-LABEL fly_launch_runtime="Bun"
-
-# Bun app lives here
+FROM oven/bun:1.3.14-slim AS build
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
+COPY package.json bun.lock turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY packages/database/package.json packages/database/package.json
+RUN bun install --frozen-lockfile
 
+COPY apps/api apps/api
+COPY packages packages
+RUN bun --filter @diary/api build
 
-# Throw-away build stage to reduce size of final image
-FROM base as build
+FROM oven/bun:1.3.14-slim AS runtime
+WORKDIR /app
 
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential pkg-config python-is-python3
+ENV NODE_ENV=production
+ENV PORT=8080
 
-# Install node modules
-COPY --link bun.lockb package.json ./
-RUN bun install
+COPY --from=build --chown=bun:bun /app/apps/api/dist ./dist
 
-# Copy application code
-COPY --link . .
+USER bun
+EXPOSE 8080
 
-# Build application
-RUN bun run build
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["bun", "-e", "process.exit((await fetch('http://127.0.0.1:8080/health')).ok ? 0 : 1)"]
 
-# Remove development dependencies
-RUN rm -rf node_modules && \
-    bun install --ci
-
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD [ "bun", "run", "start" ]
+CMD ["bun", "dist/index.js"]
