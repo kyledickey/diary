@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "bun --env-file=../../.env --watch src/index.ts",
         "start": "bun dist/index.js",
-        "build": "bun build src/index.ts --target bun --outdir dist",
+        "build": "bun run build:server && bun run build:migrations",
+        "build:server": "bun build src/index.ts --target bun --outdir dist",
+        "build:migrations": "bun build src/migrate.ts --target bun --outfile dist/migrate.js",
         "check": "tsc --project tsconfig.json",
         "test": "bun test --pass-with-no-tests",
         "db:generate": "bun --filter @diary/database db:generate",

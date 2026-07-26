@@ -41,6 +41,9 @@ The repository has focused production images for each runtime:
 - `apps/api/Dockerfile` — the bundled Elysia API
 - `apps/web/Dockerfile` — the TanStack Start SSR server and static assets
 
+See [docs/railway.md](./docs/railway.md) for deploying the complete stack to
+Railway with managed PostgreSQL and separate web/API services.
+
 Run the complete stack through Compose:
 
 ```bash

@@ -44,6 +44,6 @@ USER bun
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["bun", "-e", "process.exit((await fetch('http://127.0.0.1:3000/')).ok ? 0 : 1)"]
+    CMD ["bun", "-e", "const port = Bun.env.PORT ?? '3000'; process.exit((await fetch(`http://127.0.0.1:${port}/`)).ok ? 0 : 1)"]
 
 CMD ["bun", "server.ts"]

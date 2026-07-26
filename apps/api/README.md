@@ -2,9 +2,9 @@
 
 The Diary Elysia API.
 
-The API is split into document, user, billing, webhook, authentication, and
-analytics modules. Shared HTTP contracts live in `@diary/contracts`, and all
-database schema and connection code lives in `@diary/database`.
+The API is split into document, user, billing, webhook, and authentication
+modules. Shared HTTP contracts live in `@diary/contracts`, and all database
+schema and connection code lives in `@diary/database`.
 
 OpenAPI documentation is available at `/openapi` while the API is running.
 

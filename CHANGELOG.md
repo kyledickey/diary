@@ -33,7 +33,6 @@ See also: [Web version](https://diary.kyle.so/changelog)
     ([`9684521`](https://github.com/dickeyy/diary/commit/9684521))
 -   Add some animations on the home page.
     ([`307ca3b`](https://github.com/dickeyy/diary/commit/307ca3b))
--   Add configuration for [Fly.io](https://fly.io), for API hosting.
     [`69268ee`](https://github.com/dickeyy/diary/commit/69268ee)
 
 ### Changed

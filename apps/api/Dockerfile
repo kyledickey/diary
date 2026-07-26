@@ -19,13 +19,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV DATABASE_MIGRATIONS_DIR=/app/drizzle
 
 COPY --from=build --chown=bun:bun /app/apps/api/dist ./dist
+COPY --from=build --chown=bun:bun /app/packages/database/drizzle ./drizzle
 
 USER bun
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["bun", "-e", "process.exit((await fetch('http://127.0.0.1:8080/health')).ok ? 0 : 1)"]
+    CMD ["bun", "-e", "const port = Bun.env.PORT ?? '8080'; process.exit((await fetch(`http://127.0.0.1:${port}/health`)).ok ? 0 : 1)"]
 
 CMD ["bun", "dist/index.js"]
