@@ -1,7 +1,7 @@
 import { marked } from "marked";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
-import changelog from "@/policies/cl.md?raw";
+import changelog from "../../../../CHANGELOG.md?raw";
 import privacy from "@/policies/privacy.md?raw";
 import terms from "@/policies/terms.md?raw";
 
