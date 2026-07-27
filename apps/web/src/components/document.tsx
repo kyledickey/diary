@@ -18,6 +18,11 @@ import {
     useUpdateDocumentMutation
 } from "@/features/documents/queries";
 import { useAnalytics } from "@/lib/analytics";
+import {
+    createInitialDocumentDraft,
+    type DocumentDraft,
+    reconcileSavedDocumentDraft
+} from "@/lib/document-draft";
 import { useDocumentPreferences } from "@/stores/document-preferences";
 import Editor from "./editor";
 import { Button } from "./ui/button";
@@ -43,17 +48,11 @@ interface DocumentEditorProps {
     document: Document;
 }
 
-interface Draft {
-    title: string;
-    content: string;
-    metadata: DocumentMetadata;
-}
-
 export default function DocumentEditor({ document }: DocumentEditorProps) {
     const { user } = useUser();
     const track = useAnalytics();
     const updateDocument = useUpdateDocumentMutation(document.id);
-    const initialDraft = useMemo(() => toDraft(document), [document]);
+    const initialDraft = useMemo(() => createInitialDocumentDraft(document), [document]);
     const [lastSaved, setLastSaved] = useState(initialDraft);
     const [draft, setDraft] = useState(initialDraft);
     const [saveAttempt, setSaveAttempt] = useState(0);
@@ -74,7 +73,9 @@ export default function DocumentEditor({ document }: DocumentEditorProps) {
             async () => {
                 try {
                     const { document: saved } = await updateDocument.mutateAsync(changes);
-                    setLastSaved(toDraft(saved));
+                    setLastSaved((current) =>
+                        reconcileSavedDocumentDraft(current, saved, changes.content !== undefined)
+                    );
                     setSaveAttempt(0);
                     setUpdatedAt(saved.updated_at);
                 } catch (error) {
@@ -348,15 +349,7 @@ function ConfirmDeleteDialog({
     );
 }
 
-function toDraft(document: Document): Draft {
-    return {
-        title: document.title ?? "Untitled",
-        content: document.content ?? "",
-        metadata: document.metadata
-    };
-}
-
-function getChanges(saved: Draft, draft: Draft): UpdateDocumentRequest {
+function getChanges(saved: DocumentDraft, draft: DocumentDraft): UpdateDocumentRequest {
     const changes: UpdateDocumentRequest = {};
     if (draft.content !== saved.content) {
         changes.content = draft.content;
@@ -378,19 +371,13 @@ function countWords(content: string): number {
         return 0;
     }
 
-    try {
-        const blocks = JSON.parse(content) as Array<{
-            children?: Array<{ text?: string }>;
-        }>;
-        const text = blocks
-            .flatMap((block) => block.children ?? [])
-            .map((child) => child.text ?? "")
-            .join(" ")
-            .trim();
-        return text ? text.split(/\s+/).length : 0;
-    } catch {
-        return content.trim() ? content.trim().split(/\s+/).length : 0;
-    }
+    const text = content
+        .replaceAll(/!\[[^\]]*]\([^)]*\)/g, " ")
+        .replaceAll(/\[([^\]]+)]\([^)]*\)/g, "$1")
+        .replaceAll(/^[\s]*(?:#{1,6}|>|[-+*]|\d+[.)])[\s]+/gm, "")
+        .replaceAll(/[*_~`]/g, "")
+        .trim();
+    return text ? text.split(/\s+/).length : 0;
 }
 
 function relativeTime(timestamp: number): string {
