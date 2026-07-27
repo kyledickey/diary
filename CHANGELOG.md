@@ -1,5 +1,27 @@
 # Changelog
 
+## [v1.1.0](https://github.com/kyledickey/diary/releases/tag/v1.1.0) - July 27, 2026
+
+### Added
+
+-   Add Markdown live preview for headings, lists, blockquotes, bold, and
+    italic while preserving Diary's distraction-free writing surface.
+-   Add `Cmd/Ctrl+B` and `Cmd/Ctrl+I` formatting shortcuts and Markdown-aware
+    continuation for lists and blockquotes.
+
+### Changed
+
+-   Replace the Plate and Slate editor stack with a focused CodeMirror Markdown
+    input.
+-   Use Markdown as the editor content format and lazily convert recognized
+    legacy Plate JSON when an entry is opened, without rewriting stored content
+    until the entry body is edited.
+
+### Fixed
+
+-   Preserve user-authored text that resembles Plate JSON after saving so the
+    document does not remain dirty or repeatedly autosave.
+
 ## [v1.0.0](https://github.com/kyledickey/diary/releases/tag/v1.0.0) - July 25, 2026
 
 ### Added
