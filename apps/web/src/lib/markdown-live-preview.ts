@@ -102,6 +102,9 @@ export function createMarkdownEditorTheme(metadata: DocumentMetadata): Extension
             lineHeight: "1.35",
             paddingTop: "0.35em"
         },
+        ".cm-live-heading *": {
+            textDecoration: "none"
+        },
         ".cm-live-heading-1": {
             fontSize: "1.8em"
         },
