@@ -18,6 +18,7 @@ import {
     useUpdateDocumentMutation
 } from "@/features/documents/queries";
 import { useAnalytics } from "@/lib/analytics";
+import { normalizeDocumentContent } from "@/lib/document-content";
 import { useDocumentPreferences } from "@/stores/document-preferences";
 import Editor from "./editor";
 import { Button } from "./ui/button";
@@ -351,7 +352,7 @@ function ConfirmDeleteDialog({
 function toDraft(document: Document): Draft {
     return {
         title: document.title ?? "Untitled",
-        content: document.content ?? "",
+        content: normalizeDocumentContent(document.content),
         metadata: document.metadata
     };
 }
@@ -378,19 +379,13 @@ function countWords(content: string): number {
         return 0;
     }
 
-    try {
-        const blocks = JSON.parse(content) as Array<{
-            children?: Array<{ text?: string }>;
-        }>;
-        const text = blocks
-            .flatMap((block) => block.children ?? [])
-            .map((child) => child.text ?? "")
-            .join(" ")
-            .trim();
-        return text ? text.split(/\s+/).length : 0;
-    } catch {
-        return content.trim() ? content.trim().split(/\s+/).length : 0;
-    }
+    const text = content
+        .replaceAll(/!\[[^\]]*]\([^)]*\)/g, " ")
+        .replaceAll(/\[([^\]]+)]\([^)]*\)/g, "$1")
+        .replaceAll(/^[\s]*(?:#{1,6}|>|[-+*]|\d+[.)])[\s]+/gm, "")
+        .replaceAll(/[*_~`]/g, "")
+        .trim();
+    return text ? text.split(/\s+/).length : 0;
 }
 
 function relativeTime(timestamp: number): string {
