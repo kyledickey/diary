@@ -31,7 +31,14 @@ export function LandingContent() {
         <div className="relative flex min-h-screen flex-col items-center">
             <Clouds />
 
-            <Navbar active="home" entrance />
+            <motion.div
+                initial={{ opacity: 0, y: -16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
+                className="sticky top-4 z-50 w-fit"
+            >
+                <Navbar active="home" />
+            </motion.div>
 
             <main className="relative z-10 flex w-full max-w-3xl flex-1 flex-col px-6">
                 <Hero />
