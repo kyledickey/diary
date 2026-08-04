@@ -23,17 +23,17 @@ is scoped to the signed-in owner, and the writing surface is deliberately plain
 
 ## Tech stack
 
-| Layer                       | Choice                                                                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime and package manager | [Bun](https://bun.sh/)                                                                                                         |
-| Monorepo tasks              | [Turborepo](https://turbo.build/)                                                                                              |
-| Web                         | [TanStack Start](https://tanstack.com/start), React 19, TanStack Query, Tailwind CSS, shadcn/ui, CodeMirror                      |
-| API                         | [Elysia](https://elysiajs.com/)                                                                                                |
-| Database                    | PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)                                                                       |
-| Auth                        | [Better Auth](https://better-auth.com/) with [Resend](https://resend.com/)                                                    |
-| Payments                    | [Stripe](https://stripe.com/)                                                                                                  |
-| Validation                  | [Zod](https://zod.dev/) contracts shared by both apps                                                                          |
-| Lint and format             | [Biome](https://biomejs.dev/)                                                                                                  |
+| Layer                       | Choice                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Runtime and package manager | [Bun](https://bun.sh/)                                                                                      |
+| Monorepo tasks              | [Turborepo](https://turbo.build/)                                                                           |
+| Web                         | [TanStack Start](https://tanstack.com/start), React 19, TanStack Query, Tailwind CSS, shadcn/ui, CodeMirror |
+| API                         | [Elysia](https://elysiajs.com/)                                                                             |
+| Database                    | PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)                                                    |
+| Auth                        | [Better Auth](https://better-auth.com/) with [Resend](https://resend.com/)                                  |
+| Payments                    | [Stripe](https://stripe.com/)                                                                               |
+| Validation                  | [Zod](https://zod.dev/) contracts shared by both apps                                                       |
+| Lint and format             | [Biome](https://biomejs.dev/)                                                                               |
 
 ## Project structure
 
@@ -249,9 +249,7 @@ Full documentation lives in [docs/](./docs/README.md):
 
 - Better Auth sessions are resolved from HTTP-only cookies at the API boundary.
 - Every entry lookup and mutation is scoped to the authenticated owner.
-- New entry content uses authenticated AES-256-GCM encryption.
-- Existing AES-256-CBC entries remain readable and are upgraded to GCM the next
-  time they are saved.
+- Entry content uses authenticated AES-256-GCM encryption.
 - Stripe portal sessions are created from the authenticated user's stored
   customer ID; customer IDs are never trusted from browser input.
 
