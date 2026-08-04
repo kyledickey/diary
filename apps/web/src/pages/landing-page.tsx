@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/tanstack-react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -8,11 +7,14 @@ import Link from "@/components/link";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/lib/analytics";
+import { authClient } from "@/lib/auth-client";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 export function LandingPage() {
-    const { isLoaded, isSignedIn } = useAuth();
+    const session = authClient.useSession();
+    const isLoaded = !session.isPending;
+    const isSignedIn = Boolean(session.data?.user);
     const navigate = useNavigate();
     const track = useAnalytics();
 

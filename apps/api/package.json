@@ -11,19 +11,24 @@
         "build:migrations": "bun build src/migrate.ts --target bun --outfile dist/migrate.js",
         "check": "tsc --project tsconfig.json",
         "test": "bun test --pass-with-no-tests",
+        "migrate:clerk": "bun --env-file=../../.env src/migrate-clerk.ts",
         "db:generate": "bun --filter @diary/database db:generate",
         "db:migrate": "bun --filter @diary/database db:migrate",
         "db:studio": "bun --filter @diary/database db:studio"
     },
     "dependencies": {
-        "@clerk/backend": "3.13.1",
+        "@better-auth/drizzle-adapter": "1.6.25",
+        "@better-auth/stripe": "1.6.25",
         "@diary/contracts": "workspace:*",
         "@diary/database": "workspace:*",
         "@elysia/cors": "1.4.2",
         "@elysia/openapi": "1.4.15",
+        "better-auth": "1.6.25",
+        "csv-parse": "7.0.1",
         "drizzle-orm": "0.45.2",
         "elysia": "1.4.29",
-        "stripe": "22.3.2",
+        "resend": "6.18.1",
+        "stripe": "22.4.0",
         "zod": "4.4.3"
     },
     "devDependencies": {

@@ -1,5 +1,5 @@
-import { useAuth } from "@clerk/tanstack-react-start";
 import type { VariantProps } from "class-variance-authority";
+import { authClient } from "@/lib/auth-client";
 import AccountDropdown from "./account-dropdown";
 import Link from "./link";
 import { Button, type buttonVariants } from "./ui/button";
@@ -9,7 +9,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ active }: NavbarProps) {
-    const { isSignedIn } = useAuth();
+    const session = authClient.useSession();
+    const isSignedIn = Boolean(session.data?.user);
 
     return (
         <nav className="bg-card/20 sticky top-4 z-50 flex w-fit items-center justify-between rounded-full border p-1 shadow-md backdrop-blur-[5px]">

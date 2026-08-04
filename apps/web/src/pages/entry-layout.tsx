@@ -1,15 +1,22 @@
-import { Show, SignInButton } from "@clerk/tanstack-react-start";
 import { Outlet } from "@tanstack/react-router";
 import Link from "@/components/link";
 import Sidebar from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
+import Spinner from "@/components/ui/spinner";
+import { authClient } from "@/lib/auth-client";
 
 export function EntryLayout() {
-    return (
-        <Show when="signed-in" fallback={<SignedOutEntry />}>
-            <EntryShell />
-        </Show>
-    );
+    const session = authClient.useSession();
+
+    if (session.isPending) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <Spinner className="h-7 w-7" />
+            </div>
+        );
+    }
+
+    return session.data?.user ? <EntryShell /> : <SignedOutEntry />;
 }
 
 function EntryShell() {
@@ -36,8 +43,8 @@ function SignedOutEntry() {
         <div className="flex min-h-screen flex-col items-center justify-center p-12 sm:p-4">
             <p className="text-foreground/60 mb-8 text-center">Please sign in to continue</p>
             <div className="flex w-full flex-col items-center justify-center gap-2 sm:w-1/3">
-                <Button className="w-full">
-                    <SignInButton />
+                <Button className="w-full" asChild>
+                    <Link href="/sign-in">Sign in</Link>
                 </Button>
                 <Button variant="outline" className="w-full" asChild>
                     <Link href="/">

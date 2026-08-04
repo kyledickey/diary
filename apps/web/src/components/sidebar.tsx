@@ -1,10 +1,10 @@
-import { useUser } from "@clerk/tanstack-react-start";
 import type { DocumentSummary } from "@diary/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { MenuIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useCreateDocumentMutation, useDocumentsQuery } from "@/features/documents/queries";
+import { usePlan } from "@/features/auth/queries";
 import { useAnalytics } from "@/lib/analytics";
 import { useDocumentPreferences } from "@/stores/document-preferences";
 import AccountDropdown from "./account-dropdown";
@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 export default function Sidebar() {
     const navigate = useNavigate();
-    const { user } = useUser();
+    const { plan, isLoaded: isPlanLoaded } = usePlan();
     const track = useAnalytics();
     const documentsQuery = useDocumentsQuery();
     const createDocument = useCreateDocumentMutation();
@@ -32,7 +32,7 @@ export default function Sidebar() {
     }, [documentsQuery.error]);
 
     async function createEntry() {
-        if (user?.publicMetadata.plan === "free" && createdEntryToday(documents)) {
+        if (plan === "free" && createdEntryToday(documents)) {
             toast.error("You have already created an entry today");
             return;
         }
@@ -87,7 +87,7 @@ export default function Sidebar() {
                     <Button
                         className="w-full"
                         variant="outline"
-                        disabled={createDocument.isPending}
+                        disabled={createDocument.isPending || !isPlanLoaded}
                         onClick={createEntry}
                     >
                         New Entry
@@ -109,7 +109,7 @@ export default function Sidebar() {
                             <Button
                                 className="w-full"
                                 variant="outline"
-                                disabled={createDocument.isPending}
+                                disabled={createDocument.isPending || !isPlanLoaded}
                                 onClick={createEntry}
                             >
                                 New Entry

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+-   Replace Clerk with Better Auth using Resend magic links and an email OTP
+    fallback, backed by HTTP-only database sessions.
+-   Modernize Stripe billing around Better Auth's Stripe plugin and Stripe SDK
+    22, with PostgreSQL as the subscription entitlement source of truth.
+-   Add a one-command Clerk CSV importer that preserves user IDs and existing
+    document ownership while reconciling Stripe subscriptions.
+
+### Removed
+
+-   Remove Clerk runtime dependencies, middleware, webhooks, bearer-token
+    plumbing, and free-plan Stripe subscriptions for new users.
+
 ## [v1.1.0](https://github.com/kyledickey/diary/releases/tag/v1.1.0) - July 27, 2026
 
 ### Added

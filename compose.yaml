@@ -23,14 +23,14 @@ services:
             infra:
                 condition: service_healthy
         environment:
-            CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?Set CLERK_PUBLISHABLE_KEY in .env}
-            CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY in .env}
-            CLERK_WEBHOOK_SIGNING_SECRET: ${CLERK_WEBHOOK_SIGNING_SECRET:?Set CLERK_WEBHOOK_SIGNING_SECRET in .env}
+            API_URL: ${API_URL:-http://localhost:8080}
+            AUTH_EMAIL_FROM: ${AUTH_EMAIL_FROM:-Diary <auth@mail.kyle.so>}
+            BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
             DB_URL: postgresql://${POSTGRES_USER:-diary}:${POSTGRES_PASSWORD}@infra:5432/${POSTGRES_DB:-diary}
             ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
             NODE_ENV: production
             PORT: 8080
-            STRIPE_FREE_PRICE_ID: ${STRIPE_FREE_PRICE_ID:?Set STRIPE_FREE_PRICE_ID in .env}
+            RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY in .env}
             STRIPE_PLUS_PRICE_ID: ${STRIPE_PLUS_PRICE_ID:?Set STRIPE_PLUS_PRICE_ID in .env}
             STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?Set STRIPE_SECRET_KEY in .env}
             STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?Set STRIPE_WEBHOOK_SECRET in .env}
@@ -46,12 +46,10 @@ services:
             dockerfile: apps/web/Dockerfile
             args:
                 VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-                VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY in .env}
         depends_on:
             api:
                 condition: service_healthy
         environment:
-            CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Set CLERK_SECRET_KEY in .env}
             NODE_ENV: production
             PORT: 3000
         init: true

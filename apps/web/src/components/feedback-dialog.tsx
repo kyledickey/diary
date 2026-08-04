@@ -1,4 +1,3 @@
-import { useUser } from "@clerk/tanstack-react-start";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -20,6 +19,7 @@ import {
     FormMessage
 } from "@/components/ui/form";
 import { useAnalytics } from "@/lib/analytics";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
 import Spinner from "./ui/spinner";
 import { Textarea } from "./ui/textarea";
@@ -42,7 +42,8 @@ export default function FeedbackDialog({
     isOpen: boolean;
     onStateChange(open: boolean): void;
 }) {
-    const { user } = useUser();
+    const session = authClient.useSession();
+    const user = session.data?.user;
     const trackAnalytics = useAnalytics();
 
     const [feedbackType, setFeedbackType] = useState<"Bug" | "Idea" | "Other" | null>(null);
@@ -64,7 +65,7 @@ export default function FeedbackDialog({
                 values.message,
                 "",
                 `Type: ${feedbackType ?? "Other"}`,
-                `Account: ${user?.primaryEmailAddress?.emailAddress ?? "Not provided"}`,
+                `Account: ${user?.email ?? "Not provided"}`,
                 `User ID: ${user?.id ?? "Not provided"}`
             ].join("\n")
         );

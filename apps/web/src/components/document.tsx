@@ -1,4 +1,3 @@
-import { useUser } from "@clerk/tanstack-react-start";
 import type {
     Document,
     DocumentMetadata,
@@ -12,6 +11,7 @@ import { EyeIcon, EyeOffIcon, Trash2Icon } from "lucide-react";
 import ms from "ms";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { usePlan } from "@/features/auth/queries";
 import {
     documentKeys,
     useDeleteDocumentMutation,
@@ -49,7 +49,7 @@ interface DocumentEditorProps {
 }
 
 export default function DocumentEditor({ document }: DocumentEditorProps) {
-    const { user } = useUser();
+    const { plan } = usePlan();
     const track = useAnalytics();
     const updateDocument = useUpdateDocumentMutation(document.id);
     const initialDraft = useMemo(() => createInitialDocumentDraft(document), [document]);
@@ -164,7 +164,7 @@ export default function DocumentEditor({ document }: DocumentEditorProps) {
             </nav>
 
             <div className="mt-8 flex w-full flex-col items-start justify-start md:mx-auto md:w-full md:max-w-full lg:max-w-[50rem] 2xl:max-w-[60rem]">
-                {user?.publicMetadata.plan === "free" ? (
+                {plan === "free" ? (
                     <p className="text-foreground/60 text-md mb-4 flex-wrap text-left font-mono font-medium">
                         {draft.title}
                     </p>

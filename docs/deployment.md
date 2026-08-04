@@ -19,9 +19,9 @@ Both application images run as the non-root `bun` user, define a `HEALTHCHECK`
 that hits their own port (`/health` for the API, `/` for the web app), and honor
 a runtime `PORT`.
 
-The web build declares `VITE_API_URL` and `VITE_CLERK_PUBLISHABLE_KEY` as build
-arguments and fails fast if either is empty, because Vite inlines them into the
-client bundle. Changing either one requires a rebuild — see
+The web build declares `VITE_API_URL` as a build argument and fails fast when it
+is empty, because Vite inlines it into the client bundle. Changing it requires
+a rebuild — see
 [Configuration](./configuration.md#web-appsweb).
 
 Build them individually from the root:
@@ -32,7 +32,6 @@ docker build -f apps/api/Dockerfile -t diary-api .
 docker build \
   -f apps/web/Dockerfile \
   --build-arg VITE_API_URL=http://localhost:8080 \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_replace_me \
   -t diary-web .
 ```
 
@@ -40,7 +39,9 @@ docker build \
 
 ```bash
 cp .env.example .env
-# Fill in the Clerk, Stripe, encryption, and database values.
+# Fill in the Better Auth, Resend, Stripe, encryption, and database values.
+docker compose up -d infra
+bun run migrate
 docker compose up --build
 ```
 
@@ -92,13 +93,12 @@ On `api`:
 ```dotenv
 DB_URL=${{Postgres.DATABASE_URL}}
 WEB_URL=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
-CLERK_AUTHORIZED_PARTIES=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
-CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-CLERK_WEBHOOK_SIGNING_SECRET=
+API_URL=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
+BETTER_AUTH_SECRET=
+RESEND_API_KEY=
+AUTH_EMAIL_FROM=Diary <auth@mail.kyle.so>
 ENCRYPTION_KEY=
 STRIPE_SECRET_KEY=
-STRIPE_FREE_PRICE_ID=
 STRIPE_PLUS_PRICE_ID=
 STRIPE_WEBHOOK_SECRET=
 ```
@@ -107,8 +107,6 @@ On `web`:
 
 ```dotenv
 VITE_API_URL=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
-VITE_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
 ```
 
 ### Networking
@@ -118,9 +116,9 @@ connection and PostgreSQL needs no TCP proxy or public domain.
 
 Enable public networking for `api` and `web` by generating a Railway domain.
 **Generate the API domain first** — `VITE_API_URL` must resolve while the web
-image builds. When you later move to custom domains, update `WEB_URL`,
-`CLERK_AUTHORIZED_PARTIES`, and `VITE_API_URL`, and redeploy the web service so
-the new API URL is baked in.
+image builds. When you later move to custom domains, update `API_URL`,
+`WEB_URL`, and `VITE_API_URL`, and redeploy the web service so the new API URL
+is baked in and new magic links use the correct host.
 
 ### Migrations
 
@@ -133,13 +131,11 @@ A failing migration fails the deployment and the previous version keeps serving.
 
 ## After any deployment
 
-1. Point the Clerk webhook at `https://<api-domain>/auth/webhook/user` for
-   `user.created`, `user.updated`, and `user.deleted`, and set
-   `CLERK_WEBHOOK_SIGNING_SECRET` from it. Without this, new sign-ups get no
-   database row and cannot create entries.
-2. Point the Stripe webhook at `https://<api-domain>/stripe/webhook` for
-   `customer.subscription.updated` and `customer.subscription.deleted`, and set
-   `STRIPE_WEBHOOK_SECRET`.
+1. Verify the Resend sending domain used by `AUTH_EMAIL_FROM`.
+2. Point Stripe at `https://<api-domain>/api/auth/stripe/webhook` and set the
+   resulting `STRIPE_WEBHOOK_SECRET`.
 3. Check `GET https://<api-domain>/health`.
-4. Sign up with a throwaway account and confirm a `users` row appears with a
-   `stripe_customer_id`.
+4. Request a magic link and complete sign-in; confirm `users` and `sessions`
+   rows appear.
+5. Start a Plus checkout in Stripe test mode, then confirm the webhook creates
+   an active or trialing `subscriptions` row and `/billing` opens the portal.

@@ -1,23 +1,31 @@
-import { UserProfile, useClerk, useUser } from "@clerk/tanstack-react-start";
 import { ChatBubbleIcon, DotsHorizontalIcon, SunIcon } from "@radix-ui/react-icons";
 import {
-    ArrowUpCircleIcon,
     Code2Icon,
     DollarSignIcon,
     HelpCircleIcon,
     LogOutIcon,
     MoonIcon,
     SettingsIcon,
-    StarIcon
+    StarIcon,
+    Trash2Icon
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import { usePlan } from "@/features/auth/queries";
 import { useAnalytics } from "@/lib/analytics";
+import { authClient } from "@/lib/auth-client";
 import FeedbackDialog from "./feedback-dialog";
 import Link from "./link";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent } from "./ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from "./ui/dialog";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -32,14 +40,42 @@ interface AccountDropdownProps {
 }
 
 export default function AccountDropdown({ variant = "sidebar" }: AccountDropdownProps) {
-    const { user } = useUser();
-    const { signOut } = useClerk();
+    const session = authClient.useSession();
+    const { plan } = usePlan();
     const { setTheme, theme } = useTheme();
     const track = useAnalytics();
     const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
     const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const user = session.data?.user;
+    const displayName = user?.name || user?.email || "Account";
 
-    const displayName = user?.username ?? user?.primaryEmailAddress?.emailAddress ?? "Account";
+    async function signOut() {
+        track("sign_out");
+        await authClient.signOut();
+        window.location.assign("/");
+    }
+
+    async function deleteAccount() {
+        if (
+            !window.confirm(
+                "Delete your Diary account and every journal entry? This cannot be undone."
+            )
+        ) {
+            return;
+        }
+
+        setDeleteError(null);
+        setIsDeleting(true);
+        const { error } = await authClient.deleteUser();
+        if (error) {
+            setDeleteError(error.message ?? "Your account could not be deleted");
+            setIsDeleting(false);
+            return;
+        }
+        window.location.assign("/");
+    }
 
     return (
         <>
@@ -55,8 +91,13 @@ export default function AccountDropdown({ variant = "sidebar" }: AccountDropdown
                     >
                         <span className="flex min-w-0 items-center gap-2">
                             <Avatar className={variant === "navbar" ? "h-5 w-5" : "h-6 w-6"}>
-                                <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                                <AvatarImage src={user?.imageUrl} alt={`${displayName}'s avatar`} />
+                                <AvatarFallback>
+                                    {displayName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                                <AvatarImage
+                                    src={user?.image ?? undefined}
+                                    alt={`${displayName}'s avatar`}
+                                />
                             </Avatar>
                             <span className="truncate text-[14px]">{displayName}</span>
                         </span>
@@ -72,9 +113,9 @@ export default function AccountDropdown({ variant = "sidebar" }: AccountDropdown
                             Account Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link href="/billing">
+                            <Link href={plan === "plus" ? "/billing" : "/upgrade"}>
                                 <DollarSignIcon className="mr-2 h-4 w-4" />
-                                Billing
+                                {plan === "plus" ? "Billing" : "Upgrade"}
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -110,27 +151,10 @@ export default function AccountDropdown({ variant = "sidebar" }: AccountDropdown
                             Changelog
                         </Link>
                     </DropdownMenuItem>
-                    {user?.publicMetadata.plan === "free" ? (
-                        <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                asChild
-                                className="bg-yellow-500 text-black focus:bg-yellow-500/80 focus:text-black"
-                            >
-                                <Link href="/billing">
-                                    <ArrowUpCircleIcon className="mr-2 h-4 w-4" />
-                                    Upgrade
-                                </Link>
-                            </DropdownMenuItem>
-                        </>
-                    ) : null}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                         className="focus:bg-red-500/20"
-                        onSelect={() => {
-                            track("sign_out");
-                            void signOut();
-                        }}
+                        onSelect={() => void signOut()}
                     >
                         <LogOutIcon className="mr-2 h-4 w-4" />
                         Sign out
@@ -139,8 +163,29 @@ export default function AccountDropdown({ variant = "sidebar" }: AccountDropdown
             </DropdownMenu>
 
             <Dialog open={accountSettingsOpen} onOpenChange={setAccountSettingsOpen}>
-                <DialogContent className="flex w-fit max-w-full items-center justify-center p-8">
-                    <UserProfile routing="hash" />
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Account</DialogTitle>
+                        <DialogDescription>
+                            Your journal is connected to {user?.email ?? "your email address"}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="rounded-lg border p-4">
+                        <p className="text-sm font-medium">{displayName}</p>
+                        <p className="text-muted-foreground mt-1 text-sm">{user?.email}</p>
+                        <p className="text-muted-foreground mt-3 text-xs capitalize">{plan} plan</p>
+                    </div>
+                    {deleteError ? <p className="text-sm text-red-500">{deleteError}</p> : null}
+                    <DialogFooter>
+                        <Button
+                            variant="destructive"
+                            onClick={() => void deleteAccount()}
+                            disabled={isDeleting}
+                        >
+                            <Trash2Icon className="mr-2 h-4 w-4" />
+                            {isDeleting ? "Deleting…" : "Delete account"}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
             <FeedbackDialog isOpen={feedbackOpen} onStateChange={setFeedbackOpen} />

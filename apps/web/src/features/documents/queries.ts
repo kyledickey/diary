@@ -1,60 +1,56 @@
-import { useAuth } from "@clerk/tanstack-react-start";
 import type { Document, DocumentSummary, UpdateDocumentRequest } from "@diary/contracts";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, type TokenGetter } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
+import { authClient } from "@/lib/auth-client";
 
 export const documentKeys = {
     all: ["documents"] as const,
     detail: (id: string) => ["documents", id] as const
 };
 
-export function documentsQueryOptions(getToken: TokenGetter) {
+export function documentsQueryOptions() {
     return queryOptions({
         queryKey: documentKeys.all,
-        queryFn: async () => (await apiClient.listDocuments(getToken)).documents
+        queryFn: async () => (await apiClient.listDocuments()).documents
     });
 }
 
-export function documentQueryOptions(id: string, getToken: TokenGetter) {
+export function documentQueryOptions(id: string) {
     return queryOptions({
         queryKey: documentKeys.detail(id),
-        queryFn: async () => (await apiClient.getDocument(id, getToken)).document
+        queryFn: async () => (await apiClient.getDocument(id)).document
     });
 }
 
 export function useDocumentsQuery() {
-    const { getToken, isSignedIn } = useAuth();
+    const session = authClient.useSession();
     return useQuery({
-        ...documentsQueryOptions(getToken),
-        enabled: isSignedIn === true
+        ...documentsQueryOptions(),
+        enabled: Boolean(session.data?.user)
     });
 }
 
 export function useDocumentQuery(id: string) {
-    const { getToken, isSignedIn } = useAuth();
+    const session = authClient.useSession();
     return useQuery({
-        ...documentQueryOptions(id, getToken),
-        enabled: isSignedIn === true
+        ...documentQueryOptions(id),
+        enabled: Boolean(session.data?.user)
     });
 }
 
 export function useCreateDocumentMutation() {
-    const { getToken } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: () =>
-            apiClient.createDocument(
-                {
-                    title: new Date().toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                    }),
-                    timezoneOffsetMinutes: new Date().getTimezoneOffset()
-                },
-                getToken
-            ),
+            apiClient.createDocument({
+                title: new Date().toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                }),
+                timezoneOffsetMinutes: new Date().getTimezoneOffset()
+            }),
         onSuccess: ({ document }) => {
             const { content: _content, ...summary } = document;
             queryClient.setQueryData<DocumentSummary[]>(documentKeys.all, (current = []) => [
@@ -68,12 +64,10 @@ export function useCreateDocumentMutation() {
 }
 
 export function useUpdateDocumentMutation(id: string) {
-    const { getToken } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (changes: UpdateDocumentRequest) =>
-            apiClient.updateDocument(id, changes, getToken),
+        mutationFn: (changes: UpdateDocumentRequest) => apiClient.updateDocument(id, changes),
         scope: { id: `document-${id}` },
         onSuccess: ({ document }) => {
             queryClient.setQueryData<Document>(documentKeys.detail(id), document);
@@ -94,11 +88,10 @@ export function useUpdateDocumentMutation(id: string) {
 }
 
 export function useDeleteDocumentMutation(id: string) {
-    const { getToken } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => apiClient.deleteDocument(id, getToken),
+        mutationFn: () => apiClient.deleteDocument(id),
         onSuccess: () => {
             queryClient.removeQueries({ queryKey: documentKeys.detail(id) });
             queryClient.setQueryData<DocumentSummary[]>(documentKeys.all, (current = []) =>
