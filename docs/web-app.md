@@ -10,7 +10,7 @@ browser; it does not proxy or own data.
 | --- | --- |
 | `src/routes/` | File-based routes. `routeTree.gen.ts` is generated — never edit it, and it is excluded from Biome. |
 | `src/router.tsx` | Creates the router and the `QueryClient`, and wires SSR/query integration |
-| `src/start.ts` | `createStart()` with `clerkMiddleware()` in the request pipeline |
+| `src/start.ts` | Minimal TanStack Start request pipeline; auth lives in the API |
 | `src/routes/__root.tsx` | HTML shell, `<head>` metadata, fonts, providers, theme, toaster |
 | `server.ts` | Production Bun server: serves `dist/client` assets, then hands everything else to the SSR handler |
 | `vite.config.ts` | TanStack Start, SVGR, and React plugins; `@/*` path alias from `tsconfig.json` |
@@ -30,13 +30,13 @@ before touching the filesystem. In development Vite handles all of this.
 | `/entry` | `EntryLayout` | Signed-in shell with the sidebar; signed-out visitors get a sign-in prompt |
 | `/entry/` | `EntryIndexPage` | Redirects to the last selected entry, or the newest one |
 | `/entry/$id` | `EntryDocumentPage` | The editor |
-| `/billing` | `BillingPage` | Redirects to the Stripe portal |
-| `/upgrade` | `BillingPage` | Same component as `/billing` |
+| `/billing` | `BillingPage` | Opens the Stripe billing portal through Better Auth |
+| `/upgrade` | `BillingPage` | Starts Plus checkout through Better Auth |
 | `/changelog` | `PolicyPage` | Renders the repository `CHANGELOG.md` |
 | `/privacy` | `PolicyPage` | Renders `src/policies/privacy.md` |
 | `/terms` | `PolicyPage` | Renders `src/policies/terms.md` |
-| `/sign-in/$` | Clerk `<SignIn>` | Path-based routing |
-| `/sign-up/$` | Clerk `<SignUp>` | Path-based routing |
+| `/sign-in` | `AuthPage` | Passwordless sign-in with a six-digit email code |
+| `/sign-up` | `AuthPage` | Passwordless account creation with the same UI |
 
 `PolicyPage` imports Markdown with Vite's `?raw` suffix and renders it through
 `marked` with `dangerouslySetInnerHTML`. That is safe only because the source is
@@ -49,11 +49,14 @@ redeploy.
 
 ## Data layer
 
-`src/lib/api-client.ts` is the only place that calls `fetch`. Every method takes
-a `TokenGetter` (Clerk's `getToken`), attaches `Authorization: Bearer …`, throws
-`ApiClientError` with the API's status and code on failure, and parses success
-responses through the matching `@diary/contracts` schema. A missing token throws
-`401 UNAUTHORIZED` locally without a network round trip.
+`src/lib/api-client.ts` is the only place that calls document endpoints. Every
+request uses `credentials: "include"`, throws `ApiClientError` with the API's
+status and code on failure, and parses success responses through the matching
+`@diary/contracts` schema.
+
+`src/lib/auth-client.ts` configures the Better Auth React client with email-OTP
+and Stripe client plugins. It points at `VITE_API_URL` and also sends
+credentials on every request.
 
 `src/features/<domain>/queries.ts` wraps that client in TanStack Query:
 
@@ -61,7 +64,7 @@ responses through the matching `@diary/contracts` schema. A missing token throws
   `["documents", id]`.
 - `documentsQueryOptions` / `documentQueryOptions` are exported separately from
   the hooks so routes can prefetch with the same key and function.
-- Queries are `enabled` only when Clerk reports `isSignedIn === true`.
+- Queries are `enabled` only after `authClient.useSession()` returns a user.
 - Mutations update the cache directly in `onSuccess` — create prepends a summary
   and seeds the detail cache, update rewrites both the detail entry and the
   matching list row, delete removes both — so the sidebar reacts without a
@@ -91,9 +94,11 @@ behaviour-dense file in the app.
 - Free-plan users get a static title; Plus users get an editable `Input`. The
   API enforces the same rule — the UI is a courtesy, not the control.
 
-`src/components/editor.tsx` is a thin Plate wrapper. Content is stored as a
-JSON-serialized Slate value, so `content` is a JSON string end to end, not
-Markdown or HTML.
+`src/components/editor.tsx` wraps CodeMirror with Markdown parsing, live-preview
+decorations, history, line wrapping, indentation, and formatting shortcuts.
+Current content is plain Markdown. `normalizeDocumentContent()` recognizes
+legacy Plate-shaped JSON when an entry first loads and converts supported blocks
+to Markdown without rewriting the row until the user edits its body.
 
 ## Client state
 
@@ -104,8 +109,10 @@ Markdown or HTML.
   were reading across sessions.
 - **Theme** — `next-themes` with `attribute="class"`, defaulting to dark with
   system detection.
-- **Auth and plan** — read from Clerk hooks (`useAuth`, `useUser`). Plan checks
-  read `user.publicMetadata.plan`.
+- **Auth** — `authClient.useSession()` exposes the Better Auth user and loading
+  state.
+- **Plan** — `usePlan()` lists Better Auth Stripe subscriptions and treats an
+  active or trialing `plus` record as paid.
 
 The sidebar also pre-checks the free-plan daily limit client-side
 (`createdEntryToday`) to show a toast instead of a round trip, but the

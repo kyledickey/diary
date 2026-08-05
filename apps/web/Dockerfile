@@ -12,16 +12,14 @@ RUN bun install --frozen-lockfile
 
 FROM dependencies AS build
 ARG VITE_API_URL
-ARG VITE_CLERK_PUBLISHABLE_KEY
 
 ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
 
 COPY CHANGELOG.md CHANGELOG.md
 COPY apps/web apps/web
 COPY packages packages
 
-RUN test -n "${VITE_API_URL}" && test -n "${VITE_CLERK_PUBLISHABLE_KEY}"
+RUN test -n "${VITE_API_URL}"
 RUN bun --filter @diary/web build
 
 FROM dependencies AS production-dependencies

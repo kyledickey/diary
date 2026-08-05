@@ -1,6 +1,6 @@
 import { marked } from "marked";
-import Footer from "@/components/footer";
-import Navbar from "@/components/navbar";
+import Footer from "@/components/layout/footer";
+import Navbar from "@/components/layout/navbar";
 import changelog from "../../../../CHANGELOG.md?raw";
 import privacy from "@/policies/privacy.md?raw";
 import terms from "@/policies/terms.md?raw";

@@ -2,36 +2,33 @@
 
 ## System shape
 
-Diary is two deployable applications plus a database, with Clerk and Stripe as
-external systems of record.
+Diary is two deployable applications plus PostgreSQL, with Resend and Stripe as
+external services.
 
 ```
                     ┌──────────────────────────────────────────┐
                     │              Browser                     │
-                    │  React app, Clerk session, TanStack Query│
+                    │ React app, Better Auth client, Query     │
                     └───────┬───────────────────────┬──────────┘
         document HTML,      │                       │  fetch() with
-        JS/CSS assets       │                       │  Authorization: Bearer <Clerk session token>
+        JS/CSS assets       │                       │  HTTP-only session cookie
                     ┌───────▼─────────┐     ┌───────▼──────────┐
                     │  apps/web       │     │  apps/api        │
                     │  TanStack Start │     │  Elysia on Bun   │
                     │  SSR on Bun     │     │  :8080           │
                     │  :3000          │     └───┬──────────┬───┘
-                    └───────┬─────────┘         │          │
-                            │ clerkMiddleware   │          │ Stripe API
-                            ▼                   │          ▼
-                          Clerk ────────────────┘      Stripe
-                            │  webhooks              webhooks │
-                            └────────────►  apps/api  ◄───────┘
-                                             │
-                                             ▼
-                                        PostgreSQL
-                                     (users, documents)
+                    └─────────────────┘         │          │ Stripe API
+                                               │          ▼
+                                      Resend ◄─┤      Stripe
+                                               │       webhooks
+                                               ▼          │
+                                          PostgreSQL ◄────┘
+                               (auth, subscriptions, documents)
 ```
 
 The important consequence of this shape: **the browser talks to the API
-directly.** The SSR server renders HTML and runs Clerk's request middleware, but
-it does not proxy entry data. `VITE_API_URL` is therefore a public,
+directly.** The SSR server renders HTML but does not authenticate requests or
+proxy entry data. `VITE_API_URL` is therefore a public,
 browser-visible URL, and the API's CORS origin must be the web app's public URL.
 
 ## Workspace boundaries
@@ -66,8 +63,8 @@ at both the Drizzle and SQL levels.
 
 Dependencies are constructed once in `apps/api/src/index.ts` and injected into
 `createApp()` (`apps/api/src/app.ts`). Nothing reaches for a module-level
-singleton, which is why the service tests can substitute an in-memory
-`DocumentStore` and hand-built Clerk/Stripe doubles.
+singleton, which is why the document service tests can substitute an in-memory
+`DocumentStore`.
 
 `DocumentService` depends on the `DocumentStore` interface rather than
 `DocumentRepository`, so `apps/api/src/modules/documents/service.test.ts` runs
@@ -75,12 +72,13 @@ the real business rules with no database.
 
 ## Request lifecycle
 
-1. `cors` restricts origins to `env.webUrl` and allows only
-   `Authorization` and `Content-Type` on `GET`, `POST`, `PATCH`, `DELETE`, and
+1. `cors` restricts origins to `env.webUrl`, allows credentials and
+   `Content-Type`, and accepts `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, and
    `OPTIONS`.
 2. `openapi` mounts the generated reference at `/openapi`.
-3. The route handler calls `auth.requireUser(request)`, which verifies the Clerk
-   session token and returns the user ID, or throws `unauthorized()`.
+3. Better Auth handles `/api/auth/*`; document handlers call
+   `auth.requireUser(request)`, which resolves the database session cookie and
+   returns the user ID or throws `unauthorized()`.
 4. The service applies rules and the repository executes SQL.
 5. `onError` converts failures to one JSON envelope. `AppError` keeps its status
    and code, Elysia's `VALIDATION` code becomes `422 VALIDATION_ERROR`, and
@@ -92,27 +90,20 @@ See [the API reference](./api.md) for the endpoint list and error envelope.
 
 ## Runtime flows
 
-### Account provisioning
+### Passwordless authentication
 
-Sign-up is driven entirely by Clerk webhooks
-(`apps/api/src/modules/webhooks/clerk.ts`):
+Better Auth is mounted at `/api/auth` and uses the Drizzle adapter:
 
-1. `user.created` → `UserService.sync()` upserts the `users` row from the
-   Clerk payload, choosing the primary email address.
-2. `BillingService.provisionFreePlan()` creates a Stripe customer (idempotency
-   key `diary-customer-<userId>`) and a subscription to `STRIPE_FREE_PRICE_ID`
-   (key `diary-free-subscription-<userId>`), stores the customer ID on the
-   `users` row, and writes `{ stripeCustomerId, plan: "free" }` into Clerk
-   `publicMetadata`.
-3. `user.updated` re-syncs profile fields but preserves the stored
-   `stripe_customer_id`.
-4. `user.deleted` deletes the Stripe customer, then deletes the user's documents
-   and the user row inside one transaction.
+1. The browser requests a six-digit email OTP.
+2. `AuthEmailService` sends the message through Resend. Verification values are
+   hashed in PostgreSQL and expire after ten minutes.
+3. A valid code verifies the email and creates a database session.
+4. Better Auth returns an HTTP-only cookie. Subsequent document requests send
+   that cookie with `credentials: "include"`.
 
-**Clerk `publicMetadata.plan` is the source of truth for entitlement.** The
-database stores only the Stripe customer ID; the API reads the plan through
-`AuthService.getPlan()`, and the browser reads the same value from
-`useUser().publicMetadata.plan`.
+Sessions expire after 30 days and are refreshed at most once per day. New IDs
+are UUIDs; existing string IDs remain valid because the schema uses
+`varchar(255)`.
 
 ### Writing an entry
 
@@ -144,13 +135,11 @@ not infer a timezone.
 
 ### Plan changes
 
-The Stripe billing portal is the only upgrade and downgrade path. `/billing`
-and `/upgrade` both render `BillingPage`, which immediately calls
-`POST /billing/portal` and redirects to the returned Stripe URL. When the
-subscription changes, Stripe posts to `/stripe/webhook`; the API resolves the
-customer to a user, derives the plan (`free` when the price matches
-`STRIPE_FREE_PRICE_ID` or the subscription was deleted, otherwise `plus`), and
-writes it back to Clerk metadata.
+`/upgrade` uses the Better Auth Stripe client to start checkout for the `plus`
+plan. `/billing` opens the Stripe customer portal. The plugin handles
+`/api/auth/stripe/webhook` and writes subscription state into PostgreSQL.
+`AuthService.getPlan()` treats an active or trialing `plus` subscription as
+paid; otherwise the user is free. Free accounts have no Stripe subscription.
 
 ## Persistence and logging
 

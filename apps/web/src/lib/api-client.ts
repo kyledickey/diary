@@ -1,6 +1,5 @@
 import {
     apiErrorSchema,
-    billingPortalResponseSchema,
     type CreateDocumentRequest,
     deleteDocumentResponseSchema,
     documentResponseSchema,
@@ -8,8 +7,6 @@ import {
     type UpdateDocumentRequest
 } from "@diary/contracts";
 import type { z } from "zod";
-
-export type TokenGetter = () => Promise<string | null>;
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
@@ -27,19 +24,13 @@ export class ApiClientError extends Error {
 async function request<TSchema extends z.ZodType>(
     path: string,
     schema: TSchema,
-    getToken: TokenGetter,
     init: RequestInit = {}
 ): Promise<z.infer<TSchema>> {
-    const token = await getToken();
-    if (!token) {
-        throw new ApiClientError("Authentication is required", 401, "UNAUTHORIZED");
-    }
-
     const response = await fetch(`${apiUrl}${path}`, {
         ...init,
+        credentials: "include",
         headers: {
             Accept: "application/json",
-            Authorization: `Bearer ${token}`,
             ...(init.body ? { "Content-Type": "application/json" } : {}),
             ...init.headers
         }
@@ -62,31 +53,24 @@ async function request<TSchema extends z.ZodType>(
 }
 
 export const apiClient = {
-    listDocuments: (getToken: TokenGetter) =>
-        request("/documents", listDocumentsResponseSchema, getToken),
+    listDocuments: () => request("/documents", listDocumentsResponseSchema),
 
-    getDocument: (id: string, getToken: TokenGetter) =>
-        request(`/documents/${id}`, documentResponseSchema, getToken),
+    getDocument: (id: string) => request(`/documents/${id}`, documentResponseSchema),
 
-    createDocument: (input: CreateDocumentRequest, getToken: TokenGetter) =>
-        request("/documents", documentResponseSchema, getToken, {
+    createDocument: (input: CreateDocumentRequest) =>
+        request("/documents", documentResponseSchema, {
             method: "POST",
             body: JSON.stringify(input)
         }),
 
-    updateDocument: (id: string, input: UpdateDocumentRequest, getToken: TokenGetter) =>
-        request(`/documents/${id}`, documentResponseSchema, getToken, {
+    updateDocument: (id: string, input: UpdateDocumentRequest) =>
+        request(`/documents/${id}`, documentResponseSchema, {
             method: "PATCH",
             body: JSON.stringify(input)
         }),
 
-    deleteDocument: (id: string, getToken: TokenGetter) =>
-        request(`/documents/${id}`, deleteDocumentResponseSchema, getToken, {
+    deleteDocument: (id: string) =>
+        request(`/documents/${id}`, deleteDocumentResponseSchema, {
             method: "DELETE"
-        }),
-
-    createBillingPortal: (getToken: TokenGetter) =>
-        request("/billing/portal", billingPortalResponseSchema, getToken, {
-            method: "POST"
         })
 };

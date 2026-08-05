@@ -3,18 +3,14 @@ import { createApp } from "./app";
 import { loadEnv } from "./config/env";
 import { DocumentCipher } from "./lib/cipher";
 import { logger } from "./lib/logger";
+import { createAuth } from "./modules/auth/auth";
 import { AuthService } from "./modules/auth/service";
-import { BillingService } from "./modules/billing/service";
 import { DocumentRepository } from "./modules/documents/repository";
 import { DocumentService } from "./modules/documents/service";
-import { UserRepository } from "./modules/users/repository";
-import { UserService } from "./modules/users/service";
 
 const env = loadEnv();
 const { db } = createDatabase(env.databaseUrl);
-const auth = new AuthService(env.clerk);
-const users = new UserService(new UserRepository(db));
-const billing = new BillingService(env.stripe, env.webUrl, auth, users);
+const auth = new AuthService(createAuth(db, env), db);
 const documents = new DocumentService(
     new DocumentRepository(db),
     new DocumentCipher(env.encryptionKey)
@@ -24,9 +20,7 @@ const app = createApp({
     env,
     logger,
     auth,
-    documents,
-    billing,
-    users
+    documents
 });
 
 app.listen(env.port);

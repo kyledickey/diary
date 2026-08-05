@@ -5,10 +5,10 @@ that back that claim, and their limits.
 
 ## Trust boundaries
 
-- The browser is untrusted. It holds a Clerk session token and nothing else that
-  grants access.
-- The web SSR server renders UI and runs Clerk middleware. It never reads or
-  writes entry data.
+- The browser is untrusted. It holds an HTTP-only Better Auth session cookie;
+  JavaScript cannot read the session token.
+- The web SSR server renders UI. It never holds auth secrets or reads or writes
+  entry data.
 - The API is the only component with database and Stripe credentials, and it
   re-derives the caller's identity on every request.
 
@@ -17,18 +17,16 @@ toast) are conveniences. The API enforces the same rules independently.
 
 ## Authentication
 
-Every `/documents` and `/billing` request goes through
-`AuthService.requireUser()`, which calls Clerk's `authenticateRequest` with:
+Every `/documents` request goes through `AuthService.requireUser()`, which asks
+Better Auth to resolve the session from the request headers. The user ID comes
+from the database-backed session, never from a caller-controlled header, body,
+or query parameter.
 
-- `acceptsToken: "session_token"` — API keys and other token types are rejected
-- `authorizedParties` — the token's `azp` must be `WEB_URL`, or one of
-  `CLERK_AUTHORIZED_PARTIES` when set, which blocks tokens minted for another
-  origin
-- `jwtKey` — when `CLERK_JWT_KEY` is set, verification is local, with no network
-  call to Clerk on the request path
-
-The user ID comes from the verified token, never from a header, body, or query
-parameter.
+Six-digit OTPs are stored hashed and expire after ten minutes. OTP verification
+permits five attempts, and OTP requests are limited to one per 60 seconds.
+Better Auth's rate limiter is active in every environment. Origin and CSRF
+checks remain enabled; only `WEB_URL` is trusted. Production forces secure
+cookies. Sessions expire after 30 days and are refreshed at most once per day.
 
 ## Ownership
 
@@ -73,25 +71,20 @@ wherever you keep the database backups.
 
 ## Billing integrity
 
-- Portal sessions are created from the `stripe_customer_id` stored on the
-  caller's `users` row. A customer ID from the request is never trusted.
-- Sign-up provisioning uses idempotency keys (`diary-customer-<userId>`,
-  `diary-free-subscription-<userId>`), so a redelivered `user.created` webhook
-  does not create duplicate customers or subscriptions.
-- Entitlement lives in Clerk `publicMetadata.plan`, written only by the API in
-  response to a verified Stripe or Clerk webhook.
+- Subscription actions are authorized against the Better Auth session's user
+  ID; a caller cannot operate on another reference ID.
+- The Stripe plugin creates a customer only when billing is needed. Free users
+  do not receive customers or subscriptions.
+- Entitlement is derived server-side from an active or trialing `plus` row in
+  PostgreSQL. Browser subscription state is a UI convenience only.
+- Account deletion removes the Stripe customer before deleting the user; a
+  Stripe failure aborts the local deletion rather than silently diverging.
 
 ## Webhook verification
 
-Both webhook routes are declared with `parse: "none"` so the raw body reaches
-signature verification byte-for-byte — a body parser would break both
-signatures.
-
-- Clerk: `verifyWebhook()` with `CLERK_WEBHOOK_SIGNING_SECRET`; failure returns
-  `400 BAD_REQUEST`.
-- Stripe: a `stripe-signature` header is required by the route schema, and
-  `stripe.webhooks.constructEvent` verifies it against `STRIPE_WEBHOOK_SECRET`;
-  failure returns `400 BAD_REQUEST`.
+Stripe sends subscription events to `/api/auth/stripe/webhook`. The Better Auth
+plugin receives the raw request and verifies its `stripe-signature` with
+`STRIPE_WEBHOOK_SECRET` before updating local customer or subscription state.
 
 ## Plan enforcement
 
@@ -105,16 +98,17 @@ Two rules, both enforced server-side:
 - **Free plan cannot edit titles.** `403 FORBIDDEN` when a free-plan `PATCH`
   sends a title different from the stored one.
 
-Note that `PATCH /documents/:id` only fetches the plan from Clerk when the body
-contains a `title`, and the deprecated `POST /documents/:id` route skips the
-plan lookup entirely because it accepts content only. Any future rule that gates
-content or metadata must add its own plan check.
+`PATCH /documents/:id` only queries subscription state when the body contains a
+title, and the deprecated `POST /documents/:id` route skips the plan lookup
+because it accepts content only. Any future rule that gates content or metadata
+must add its own plan check.
 
 ## Transport and CORS
 
-CORS is restricted to `env.webUrl` as the single allowed origin, with
-`Authorization` and `Content-Type` headers, the five methods the API actually
-uses, and a 24-hour preflight cache. There is no wildcard origin.
+CORS is restricted to `env.webUrl` as the single allowed origin, permits
+credentialed requests and the `Content-Type` header, allows the methods used by
+the API and Better Auth, and caches preflight responses for 24 hours. There is
+no wildcard origin.
 
 The API does not terminate TLS; the platform in front of it does.
 
@@ -125,9 +119,9 @@ The API does not terminate TLS; the platform in front of it does.
 - `.gitignore` and `.dockerignore` both exclude `.env` and `.env.*` while
   keeping `.env.example`, so local secrets do not reach a commit or a build
   context.
-- Only the API holds `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, the webhook
-  secrets, `ENCRYPTION_KEY`, and `DB_URL`. The web server holds
-  `CLERK_SECRET_KEY` for SSR middleware and nothing else.
+- Only the API holds `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
+  `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ENCRYPTION_KEY`, and `DB_URL`.
+  The web server needs no auth, email, database, billing, or encryption secret.
 
 ## Error disclosure and logging
 

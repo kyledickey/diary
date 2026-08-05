@@ -6,27 +6,51 @@ web app only indirectly through `@diary/contracts` types.
 
 ## Tables
 
-Defined in `packages/database/src/schema.ts` and created by
-`packages/database/drizzle/0000_breezy_plazm.sql`.
+Defined in `packages/database/src/schema.ts` and created by the checked-in SQL
+under `packages/database/drizzle/`.
 
 ### `users`
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | `varchar(255)` PK | The Clerk user ID, not a generated key |
-| `email` | `varchar(255)` not null | Clerk primary email at last sync |
+| `id` | `varchar(255)` PK | Opaque user ID; new accounts use UUIDs |
+| `name` | `varchar(255)` not null | Display name |
+| `email` | `varchar(255)` unique, not null | Normalized sign-in email |
+| `email_verified` | `boolean` not null | Set after passwordless verification |
 | `image_url` | `text` | Nullable |
 | `username` | `varchar(255)` unique | Nullable |
-| `stripe_customer_id` | `varchar(255)` | Nullable until provisioning completes |
-| `created_at` | `bigint` not null | Unix seconds, taken from the Clerk payload |
-| `updated_at` | `bigint` not null | Unix seconds, taken from the Clerk payload |
+| `stripe_customer_id` | `varchar(255)` | Nullable; assigned when billing is first needed |
+| `created_at` | `timestamptz` not null | Creation time |
+| `updated_at` | `timestamptz` not null | Last profile update |
 
-Rows are written only by the Clerk webhook handler and by
-`setStripeCustomerId`. Nothing in the HTTP API creates a user on demand, so a
-Clerk account with no delivered `user.created` webhook cannot own documents.
+Better Auth owns user creation and profile/session updates. The Stripe plugin
+writes `stripe_customer_id` when a customer is created. Account deletion first
+deletes that Stripe customer, then database cascades remove the user's sessions,
+accounts, and documents.
 
-Note what is *not* here: there is no `plan` column. Entitlement lives in Clerk
-`publicMetadata`.
+There is no `plan` column on `users`; entitlement is derived from
+`subscriptions`.
+
+### Better Auth tables
+
+| Table | Important fields | Purpose |
+| --- | --- | --- |
+| `sessions` | token, expiry, IP, user agent, `user_id` | Server-managed login sessions; deleting a user cascades them |
+| `accounts` | provider/account IDs, tokens, `user_id` | Better Auth provider identity records and future provider support |
+| `verifications` | identifier, hashed value, expiry | Single-use email-OTP challenges |
+
+Session tokens are unique. Indexes on `sessions.user_id`, `accounts.user_id`,
+and `verifications.identifier` serve the common auth lookups.
+
+### `subscriptions`
+
+The Better Auth Stripe plugin stores plan name, user reference, Stripe customer
+and subscription IDs, status, billing period, trial/cancellation timestamps,
+seat count, interval, and schedule ID. `stripe_subscription_id` is unique and
+`reference_id` is indexed.
+
+The API considers a user Plus only when a `plus` row is `active` or `trialing`.
+Free users need no row and no Stripe customer.
 
 ### `documents`
 
@@ -50,16 +74,14 @@ default is generated from `defaultDocumentMetadata`. Changing that constant
 changes the type, the Zod validation, and the column default together, but only
 new rows pick up a new default — existing rows keep their stored JSON.
 
-The `ON DELETE CASCADE` is a safety net rather than the delete path;
-`UserRepository.delete()` explicitly removes documents and then the user inside
-one transaction.
+The `ON DELETE CASCADE` removes documents with the owning Better Auth user.
 
 ## Timestamps
 
-All timestamps are Unix **seconds** in `bigint` columns, read in JavaScript as
-`number` (`mode: "number"`). The API writes `Math.floor(Date.now() / 1000)`;
-user timestamps are copied verbatim from Clerk. Multiply by 1000 before
-constructing a `Date`.
+Document timestamps remain Unix **seconds** in `bigint` columns, read in
+JavaScript as `number` (`mode: "number"`). Auth and subscription timestamps use
+PostgreSQL `timestamp with time zone` and are represented as JavaScript `Date`
+objects by Drizzle.
 
 ## Entry content at rest
 
@@ -90,15 +112,15 @@ runs.
 DB_URL="postgresql://…" bun --filter @diary/database db:generate
 
 # 3. Review the generated .sql file, then apply it
-DB_URL="postgresql://…" bun --filter @diary/database db:migrate
+DB_URL="postgresql://…" bun run migrate
 
 # Inspect data
 DB_URL="postgresql://…" bun --filter @diary/database db:studio
 ```
 
 `drizzle.config.ts` throws if `DB_URL` is absent, so export it or prefix the
-command. `apps/api` re-exports the same three scripts (`bun --filter @diary/api
-db:migrate` and friends) for convenience.
+command. Use the root `migrate` entrypoint when applying SQL; it handles both an
+empty database and the Compose baseline.
 
 Commit the generated `.sql` file **and** the `drizzle/meta` snapshot and journal
 together. The snapshot is how Drizzle diffs the next change; dropping it makes
@@ -108,13 +130,13 @@ future generations wrong.
 
 | Environment | Mechanism |
 | --- | --- |
-| Local, own database | `db:migrate` by hand |
-| Local, Compose | The schema SQL is baked into the image's `docker-entrypoint-initdb.d` by `infra/Dockerfile` and applied on first volume initialization |
+| Local, own database | `bun run migrate` by hand |
+| Local, Compose | Start `infra`, then run `bun run migrate` |
 | Railway | `apps/api/railway.json` sets `preDeployCommand: bun dist/migrate.js`, which runs before each deployment goes live |
 
-The Compose path does not populate Drizzle's migration bookkeeping table, so
-running `db:migrate` against a Compose-seeded database attempts to re-create
-existing tables and fails. Pick one mechanism per database.
+The Compose image seeds the first schema without Drizzle bookkeeping. The API
+migration entrypoint detects that complete baseline, records migration `0000`,
+and applies subsequent migrations. It refuses to baseline a partial schema.
 
 The API's migration entrypoint (`apps/api/src/migrate.ts`) is bundled separately
 to `dist/migrate.js` and reads the migrations directory from

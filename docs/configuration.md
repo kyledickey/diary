@@ -19,21 +19,15 @@ the first request.
 | `NODE_ENV` | no | `development` | One of `development`, `test`, `production`. Logged at startup. |
 | `PORT` | no | `8080` | Listen port. Coerced to a positive integer. |
 | `DB_URL` | **yes** | — | PostgreSQL connection URL. Must parse as a URL. |
-| `WEB_URL` | no | `http://localhost:3000` | Public web origin. Sets the CORS origin, the default Clerk authorized party, and the Stripe portal `return_url` (`${WEB_URL}/entry`). A trailing slash is stripped. |
-| `CLERK_PUBLISHABLE_KEY` | **yes** | — | Passed to `createClerkClient`. |
-| `CLERK_SECRET_KEY` | **yes** | — | Clerk backend API credential. |
-| `CLERK_JWT_KEY` | no | — | PEM public key. When set, session tokens are verified locally with no network call to Clerk. |
-| `CLERK_AUTHORIZED_PARTIES` | no | `[WEB_URL]` | Comma-separated list of accepted token `azp` values. Entries are trimmed. |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | **yes**¹ | — | Verifies `POST /auth/webhook/user`. |
-| `CLERK_USER_WH_SECRET` | no | — | Legacy alias for the above, accepted for backwards compatibility. |
+| `WEB_URL` | no | `http://localhost:3000` | Public web origin. Sets CORS, Better Auth's trusted origin, and billing return URLs. A trailing slash is stripped. |
+| `API_URL` | no | `http://localhost:8080` | Public API origin and Better Auth base URL. A trailing slash is stripped. |
+| `BETTER_AUTH_SECRET` | **yes** | — | High-entropy signing secret with at least 32 characters. Keep it stable between deployments. |
+| `RESEND_API_KEY` | **yes** | — | Server-side Resend credential used for passwordless authentication email. |
+| `AUTH_EMAIL_FROM` | no | `Diary <auth@mail.kyle.so>` | Verified sender used for one-time sign-in codes. |
 | `ENCRYPTION_KEY` | **yes** | — | Secret for entry content encryption. See [Security](./security.md#entry-encryption). |
 | `STRIPE_SECRET_KEY` | **yes** | — | Stripe API credential. |
-| `STRIPE_FREE_PRICE_ID` | **yes** | — | Price subscribed on sign-up, and the value compared against to classify a subscription as `free`. |
-| `STRIPE_PLUS_PRICE_ID` | **yes** | — | Required at startup and loaded into config. Plan classification is currently done by *not* matching the free price, so this value is not read at runtime. |
-| `STRIPE_WEBHOOK_SECRET` | **yes** | — | Verifies `POST /stripe/webhook`. |
-
-¹ `loadEnv()` throws if neither `CLERK_WEBHOOK_SIGNING_SECRET` nor
-`CLERK_USER_WH_SECRET` is set.
+| `STRIPE_PLUS_PRICE_ID` | **yes** | — | Recurring price used by the Better Auth `plus` subscription plan. |
+| `STRIPE_WEBHOOK_SECRET` | **yes** | — | Verifies `POST /api/auth/stripe/webhook`. |
 
 ### Migration runner
 
@@ -57,12 +51,10 @@ put a secret there.
 | Variable | Stage | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
 | `VITE_API_URL` | build | effectively yes | `http://localhost:8080` | API base URL used by `apps/web/src/lib/api-client.ts`. A trailing slash is stripped. |
-| `VITE_CLERK_PUBLISHABLE_KEY` | build | yes | — | Clerk browser key. `apps/web/Dockerfile` fails the build if it is empty. |
-| `CLERK_SECRET_KEY` | runtime | yes | — | Used by `clerkMiddleware()` in the SSR request pipeline (`apps/web/src/start.ts`). |
 | `PORT` | runtime | no | `3000` | Listen port for `apps/web/server.ts`. |
 
-Changing either `VITE_*` value requires rebuilding and redeploying the web
-image; restarting it is not enough.
+Changing `VITE_API_URL` requires rebuilding and redeploying the web image;
+restarting it is not enough.
 
 ## Compose and local ports
 
@@ -88,9 +80,10 @@ These must agree or authentication and billing break:
 - `WEB_URL` (API) must be the origin the browser actually loads, or CORS
   rejects every request.
 - `VITE_API_URL` (web build) must be the API's public URL.
-- `CLERK_AUTHORIZED_PARTIES` must include the web origin when it differs from
-  `WEB_URL`.
-- The Clerk instance behind `CLERK_PUBLISHABLE_KEY`,
-  `VITE_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY` must be the same one.
+- `API_URL` must be the public origin that serves `/api/auth`.
+- `BETTER_AUTH_SECRET` must be identical across every API instance.
+- `AUTH_EMAIL_FROM` must use a domain verified by the configured Resend account.
+- Stripe must send webhooks to `${API_URL}/api/auth/stripe/webhook` using the
+  secret configured as `STRIPE_WEBHOOK_SECRET`.
 - `ENCRYPTION_KEY` must stay stable for the lifetime of the data. See
   [Security](./security.md#key-handling).

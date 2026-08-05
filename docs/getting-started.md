@@ -8,14 +8,12 @@ saved to the database.
 - [Bun](https://bun.sh/) 1.3.14 or newer (the version pinned by
   `packageManager` in the root `package.json`)
 - PostgreSQL — either the Compose service in this repository or your own server
-- A [Clerk](https://clerk.com/) application (development instance is fine)
-- A [Stripe](https://stripe.com/) account with two prices, one for the free plan
-  and one for the Plus plan
+- A [Resend](https://resend.com/) API key and verified sending domain
+- A [Stripe](https://stripe.com/) account with one recurring Plus price
 - Docker, if you want the Compose database or the full container stack
 
-Diary cannot run against Clerk and Stripe stubs. The API refuses to start
-without every credential present, account rows are created only by a Clerk
-webhook, and sign-up provisioning calls the Stripe API directly.
+The API validates its database, Better Auth, Resend, encryption, and Stripe
+configuration at startup. Use Stripe test-mode credentials locally.
 
 ## 1. Install and configure
 
@@ -26,8 +24,8 @@ cp .env.example .env
 
 Fill in every placeholder in `.env`. [Configuration](./configuration.md)
 documents each variable, where it is read, and whether it is build-time or
-runtime. The values you must supply by hand are the Clerk keys, the Clerk
-webhook signing secret, `ENCRYPTION_KEY`, and the four Stripe values.
+runtime. Supply `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `ENCRYPTION_KEY`, and
+the Stripe secret, Plus price, and webhook secret.
 
 Both development scripts load the repository-root `.env`
 (`bun --env-file=../../.env ...`), so one file configures the web app and the
@@ -38,50 +36,43 @@ API.
 ### Option A — the Compose database
 
 ```bash
-docker compose up infra
+docker compose up -d infra
 ```
 
 `infra/Dockerfile` copies `packages/database/drizzle/0000_breezy_plazm.sql` into
 the image's `docker-entrypoint-initdb.d`, so a fresh volume comes up with the
 `users` and `documents` tables already created.
 
-That init script creates the tables but does not write Drizzle's migration
-bookkeeping table, so do **not** also run `db:migrate` against a
-Compose-seeded database — the migrator would try to re-create tables that
-already exist. Use Option B when you want the migrator to own the schema.
+The image seeds the original application tables. Apply all newer migrations
+with the repository migration entrypoint:
+
+```bash
+bun run migrate
+```
+
+The entrypoint recognizes the complete seeded schema, records its initial
+migration when needed, and then applies the remaining migrations.
 
 ### Option B — your own PostgreSQL
 
 Point `DB_URL` at an empty database and apply the checked-in migrations:
 
 ```bash
-DB_URL="postgresql://diary:password@localhost:5432/diary" \
-  bun --filter @diary/database db:migrate
+DB_URL="postgresql://diary:password@localhost:5432/diary" bun run migrate
 ```
 
-`packages/database/drizzle.config.ts` reads `DB_URL` from the process
-environment, so export it or prefix the command as shown.
+The migration entrypoint reads `DB_URL` from the process environment, so export
+it or prefix the command as shown.
 
-## 3. Connect the Clerk webhook
+## 3. Connect Stripe
 
-**This step is required, not optional.** `documents.owner_id` is a foreign key
-to `users.id`, and the only writer of `users` rows is the Clerk webhook handler
-at `POST /auth/webhook/user`. Until a `user.created` event reaches the API,
-a signed-in account has no database row, entry creation fails on the foreign
-key, and `POST /billing/portal` returns 404.
+1. Expose the local API with a tunnel (for example `ngrok http 8080`).
+2. Create a Stripe webhook endpoint at
+   `https://<tunnel-host>/api/auth/stripe/webhook`.
+3. Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 
-1. Expose the local API with a tunnel (for example
-   `ngrok http 8080` or `stripe listen`-style tooling of your choice).
-2. In the Clerk dashboard, add an endpoint pointing at
-   `https://<tunnel-host>/auth/webhook/user` subscribed to `user.created`,
-   `user.updated`, and `user.deleted`.
-3. Copy the signing secret into `CLERK_WEBHOOK_SIGNING_SECRET`.
-
-The same applies to Stripe: point a webhook at
-`https://<tunnel-host>/stripe/webhook` for
-`customer.subscription.updated` and `customer.subscription.deleted`, and copy
-its secret into `STRIPE_WEBHOOK_SECRET`. Without it, plan changes made in the
-Stripe billing portal never reach Clerk metadata.
+The Better Auth Stripe plugin verifies events and synchronizes customers and
+subscriptions into PostgreSQL. Free accounts do not require Stripe customers.
 
 ## 4. Run the apps
 
@@ -105,12 +96,12 @@ curl http://localhost:8080/health
 
 Then:
 
-1. Open <http://localhost:3000> and sign up through Clerk.
-2. Confirm the webhook fired — a row should exist in `users` with a
-   `stripe_customer_id`.
-3. Go to `/entry`, choose **New Entry**, and type. The header switches to
+1. Open <http://localhost:3000> and request a six-digit email code.
+2. Enter the code sent through Resend.
+3. Confirm a user and session row exist in PostgreSQL.
+4. Go to `/entry`, choose **New Entry**, and type. The header switches to
    "Saving" and back to "Edited …" once the debounced autosave succeeds.
-4. Confirm the stored content is ciphertext:
+5. Confirm the stored content is ciphertext:
 
    ```sql
    select left(content, 3) from documents limit 1;  -- v2:

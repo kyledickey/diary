@@ -9,24 +9,26 @@ A generated, browsable reference is served at `/openapi` while the API runs
 
 ## Authentication
 
-Every `/documents` and `/billing` endpoint requires a Clerk session token:
+Every `/documents` endpoint requires a Better Auth session cookie. Browser
+requests must include credentials:
 
+```ts
+fetch(`${apiUrl}/documents`, { credentials: "include" });
 ```
-Authorization: Bearer <clerk session token>
-```
 
-`AuthService.requireUser()` calls Clerk's `authenticateRequest` with
-`acceptsToken: "session_token"` and the configured authorized parties, and
-throws `401 UNAUTHORIZED` when the token is missing, expired, or issued for
-another party. The authenticated Clerk user ID is the owner ID used for every
-subsequent query.
+`AuthService.requireUser()` passes request headers to Better Auth's
+`getSession()`, throws `401 UNAUTHORIZED` when no session exists, and uses the
+session's user ID as the owner ID for every subsequent query.
 
-The two webhook endpoints do not use bearer auth; they verify provider
-signatures instead.
+Better Auth is mounted at `/api/auth`. Its email-OTP, session, account,
+subscription, portal, and webhook endpoints are consumed through the
+typed client in `apps/web/src/lib/auth-client.ts` rather than handwritten
+browser requests.
 
 ## Error envelope
 
-Every failure returns the same body, defined by `apiErrorSchema`:
+Document and service-route failures return the body defined by
+`apiErrorSchema`:
 
 ```json
 {
@@ -40,10 +42,10 @@ Every failure returns the same body, defined by `apiErrorSchema`:
 
 | Code | Status | Raised when |
 | --- | --- | --- |
-| `BAD_REQUEST` | 400 | Webhook signature verification failed |
-| `UNAUTHORIZED` | 401 | No valid Clerk session token |
+| `BAD_REQUEST` | 400 | A request cannot be processed |
+| `UNAUTHORIZED` | 401 | No valid Better Auth session |
 | `FORBIDDEN` | 403 | Free plan attempted a title change |
-| `NOT_FOUND` | 404 | Document not owned by the caller, or no Stripe customer |
+| `NOT_FOUND` | 404 | Document not owned by the caller |
 | `CONFLICT` | 409 | Free plan already created an entry today |
 | `VALIDATION_ERROR` | 422 | Body, params, or headers failed schema validation |
 | `INTERNAL_ERROR` | 500 | Anything unhandled; logged with the request ID |
@@ -51,6 +53,9 @@ Every failure returns the same body, defined by `apiErrorSchema`:
 Responses carry an `x-request-id` header. If the caller sends one it is echoed;
 otherwise the API generates a UUID. Use it to correlate a client failure with
 the JSON log line for the unhandled error.
+
+Better Auth endpoints use Better Auth's own JSON error format and status codes;
+the web client exposes those errors through its generated methods.
 
 Ownership failures deliberately return `404`, not `403`, so the API does not
 confirm that an entry ID exists for someone else.
@@ -77,7 +82,7 @@ Timestamps are Unix **seconds**, not milliseconds.
   "id": "uuid",
   "owner_id": "user_…",
   "title": "July 26, 2026",       // nullable
-  "content": "{\"…\":\"…\"}",     // nullable; plaintext Slate JSON on the wire
+  "content": "Today I noticed…",      // nullable; plaintext Markdown on the wire
   "created_at": 1785022832,
   "updated_at": 1785022832,
   "metadata": { "font": "serif", "font_size": 18 }
@@ -135,8 +140,8 @@ Behavior worth knowing:
 - `content` is encrypted before storage and returned decrypted.
 - `title` is trimmed and truncated to 255 characters; an empty result becomes
   `"Untitled"`.
-- The caller's plan is only fetched from Clerk when the request contains a
-  `title`. Content and metadata updates skip that round trip.
+- The caller's plan is only read from PostgreSQL when the request contains a
+  `title`. Content and metadata updates skip that query.
 - A free-plan title change that actually differs from the stored title returns
   `403 FORBIDDEN`. Sending the unchanged title is allowed.
 - `updated_at` is always set to the current time.
@@ -158,49 +163,30 @@ clients. Prefer the routes above.
 | `GET /documents/all` | `GET /documents` | Identical handler |
 | `POST /documents/:id` | `PATCH /documents/:id` | Accepts `{ "content": "…" }` only, and bypasses the plan lookup entirely |
 
-## Billing
+## Better Auth
 
-### `POST /billing/portal`
+The server mounts Better Auth at `/api/auth`. The installed plugins add:
 
-Creates a Stripe billing portal session for the authenticated user and returns
-`{ "url": "https://billing.stripe.com/…" }`. The customer ID comes from the
-caller's `users` row — never from the request — and a user with no stored
-customer ID gets `404 NOT_FOUND` ("Billing customer was not found").
-
-The return URL is `${WEB_URL}/entry`.
-
-## Webhooks
-
-Both webhook routes are registered with `parse: "none"` so the raw body reaches
-signature verification unmodified. Do not add a body parser to them.
-
-### `POST /auth/webhook/user`
-
-Verified with `CLERK_WEBHOOK_SIGNING_SECRET` via `@clerk/backend/webhooks`.
-Handled event types:
-
-| Event | Effect |
+| Capability | Server path |
 | --- | --- |
-| `user.created` | Upsert the `users` row, then create the Stripe customer and free subscription and write `plan` into Clerk `publicMetadata` |
-| `user.updated` | Re-sync email, image, and username; preserve `stripe_customer_id` |
-| `user.deleted` | Delete the Stripe customer, then delete the user's documents and user row in one transaction |
+| Request an email OTP | `POST /api/auth/email-otp/send-verification-otp` |
+| Sign in with an OTP | `POST /api/auth/sign-in/email-otp` |
+| Read the current session | `GET /api/auth/get-session` |
+| Sign out | `POST /api/auth/sign-out` |
+| Delete the current account | `POST /api/auth/delete-user` |
 
-Other event types are accepted and ignored. Verification failure returns
-`400 BAD_REQUEST`. Success returns `{ "message": "Webhook received" }`.
+OTPs expire after ten minutes and verification permits five attempts.
+Requests for a new OTP are limited to one per 60 seconds.
 
-Subscribing to these three events is mandatory for a working deployment — see
-[Getting started](./getting-started.md#3-connect-the-clerk-webhook).
+## Billing and Stripe webhooks
 
-### `POST /stripe/webhook`
+The Better Auth Stripe client provides subscription checkout, subscription
+listing, cancellation/restoration, and billing portal operations under
+`/api/auth/subscription/*`. The web app calls the generated client methods, not
+custom billing routes.
 
-Requires a `stripe-signature` header (missing header returns `400` with
-`{ "message": "Missing Stripe signature" }`) and is verified with
-`STRIPE_WEBHOOK_SECRET`.
-
-| Event | Effect |
-| --- | --- |
-| `customer.subscription.updated` | Resolve the customer to a user and set the plan from the subscription's first price: `free` when it matches `STRIPE_FREE_PRICE_ID`, otherwise `plus` |
-| `customer.subscription.deleted` | Force the plan to `free` |
-
-Other event types are ignored. An event for an unknown customer raises
-`404 NOT_FOUND`, which Stripe will retry.
+Stripe sends signed events to `POST /api/auth/stripe/webhook`. The plugin
+verifies `stripe-signature` with `STRIPE_WEBHOOK_SECRET`, updates the local
+`subscriptions` table, and maintains `users.stripe_customer_id`. The configured
+plan name is `plus`; free users are represented by the absence of an active or
+trialing Plus subscription.

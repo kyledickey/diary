@@ -1,36 +1,52 @@
-import { useAuth } from "@clerk/tanstack-react-start";
-import { useEffect, useRef } from "react";
-import Spinner from "@/components/ui/spinner";
-import { useBillingPortalMutation } from "@/features/billing/queries";
+import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { authClient } from "@/lib/auth-client";
 
-export function BillingPage() {
-    const { isLoaded, isSignedIn } = useAuth();
-    const portal = useBillingPortalMutation();
+export function BillingPage({ action }: { action: "manage" | "upgrade" }) {
+    const session = authClient.useSession();
     const started = useRef(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isLoaded || started.current) {
+        if (session.isPending || started.current) {
             return;
         }
 
-        if (!isSignedIn) {
+        if (!session.data?.user) {
             window.location.replace("/sign-in");
             return;
         }
 
         started.current = true;
-        void portal
-            .mutateAsync()
-            .then(({ url }) => window.location.assign(url))
-            .catch(() => {
+        const origin = window.location.origin;
+        const request =
+            action === "upgrade"
+                ? authClient.subscription.upgrade({
+                      plan: "plus",
+                      successUrl: `${origin}/entry`,
+                      cancelUrl: `${origin}/pricing`,
+                      returnUrl: `${origin}/billing`
+                  })
+                : authClient.subscription.billingPortal({
+                      returnUrl: `${origin}/entry`
+                  });
+
+        void request.then(({ data, error: authError }) => {
+            if (authError) {
+                setError(authError.message ?? "Stripe could not be opened");
                 started.current = false;
-            });
-    }, [isLoaded, isSignedIn, portal.mutateAsync]);
+                return;
+            }
+            if (data?.url) {
+                window.location.assign(data.url);
+            }
+        });
+    }, [action, session.data?.user, session.isPending]);
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center px-4">
-            {portal.isError ? (
-                <p className="mb-4 text-center text-sm text-red-500">{portal.error.message}</p>
+            {error ? (
+                <p className="mb-4 text-center text-sm text-red-500">{error}</p>
             ) : (
                 <p className="text-foreground/60 mb-4 text-center text-sm">
                     Please wait while we redirect you to Stripe.

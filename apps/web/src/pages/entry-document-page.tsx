@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import DocumentEditor from "@/components/document";
-import Spinner from "@/components/ui/spinner";
+import DocumentEditor from "@/components/editor/document-editor";
+import { Spinner } from "@/components/ui/spinner";
 import { useDocumentQuery } from "@/features/documents/queries";
 import { useDocumentPreferences } from "@/stores/document-preferences";
 
@@ -31,9 +31,5 @@ export function EntryDocumentPage({ id }: { id: string }) {
         );
     }
 
-    return (
-        <div className="flex h-full w-full items-center justify-center p-4 pb-8">
-            <DocumentEditor key={document.data.id} document={document.data} />
-        </div>
-    );
+    return <DocumentEditor key={document.data.id} document={document.data} />;
 }

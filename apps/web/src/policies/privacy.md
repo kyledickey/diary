@@ -10,8 +10,7 @@ platform ("Service"). By using our Service, you agree to the terms of this Priva
 
 We collect the following types of information from users:
 
--   **Personal Information:** Email addresses, social connections (Google or GitHub), names, billing
-    information.
+-   **Personal Information:** Email addresses, names, and billing information.
 -   **Collection Methods:** Collected when provided by the user.
 
 ## 2. Use of Information
@@ -19,7 +18,7 @@ We collect the following types of information from users:
 We use the collected information for the following purposes:
 
 -   **Notifications:** Using email to send notifications.
--   **Authentication:** Using email and social connections for user authentication.
+-   **Authentication:** Using one-time email codes for user authentication.
 -   **Billing:** Using billing information for processing payments.
 -   **Marketing:** Using email for marketing purposes.
 
@@ -52,7 +51,7 @@ We use the following third-party services:
 
 -   **Stripe:** For payment processing ([Stripe Privacy Policy](https://stripe.com/privacy)).
 -   **visitors.now:** For analytics ([Visitors Privacy Policy](https://visitors.now/privacy)).
--   **Clerk:** For authentication ([Clerk Privacy Policy](https://clerk.com/privacy)).
+-   **Resend:** For delivery of passwordless authentication emails ([Resend Privacy Policy](https://resend.com/legal/privacy-policy)).
 
 ## 8. Data Retention
 
