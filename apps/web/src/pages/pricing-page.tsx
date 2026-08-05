@@ -1,11 +1,11 @@
 import StripeClimateIcon from "@/../public/icons/stripe-climate.svg?react";
-import Footer from "@/components/footer";
-import Link from "@/components/link";
-import Navbar from "@/components/navbar";
+import Footer from "@/components/layout/footer";
+import Navbar from "@/components/layout/navbar";
+import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import {
     Card,
-    CardContent,
+    CardPanel,
     CardDescription,
     CardFooter,
     CardHeader,
@@ -107,7 +107,7 @@ function PricingCard({
                 </p>
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardPanel>
                 <p className="text-foreground/80 font-light">Features</p>
                 <ul className="list-inside list-disc">
                     {features.map((feature) => (
@@ -116,10 +116,14 @@ function PricingCard({
                         </li>
                     ))}
                 </ul>
-            </CardContent>
+            </CardPanel>
             <CardFooter>
-                <Button className="w-full" variant={highlight ? "default" : "secondary"} asChild>
-                    <Link href={href}>Get started</Link>
+                <Button
+                    className="w-full"
+                    variant={highlight ? "default" : "secondary"}
+                    render={<Link href={href} />}
+                >
+                    Get started
                 </Button>
             </CardFooter>
         </Card>

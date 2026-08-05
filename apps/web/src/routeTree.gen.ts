@@ -16,12 +16,12 @@ import { Route as EntryRouteImport } from './routes/entry'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as EntryIndexRouteImport } from './routes/entry.index'
 import { Route as EntryIdRouteImport } from './routes/entry.$id'
-import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
-import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +58,16 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -78,16 +88,6 @@ const EntryIdRoute = EntryIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => EntryRoute,
 } as any)
-const SignInSplatRoute = SignInSplatRouteImport.update({
-  id: '/sign-in/$',
-  path: '/sign-in/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignUpSplatRoute = SignUpSplatRouteImport.update({
-  id: '/sign-up/$',
-  path: '/sign-up/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -97,11 +97,11 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
   '/entry/$id': typeof EntryIdRoute
-  '/sign-in/$': typeof SignInSplatRoute
-  '/sign-up/$': typeof SignUpSplatRoute
   '/entry/': typeof EntryIndexRoute
 }
 export interface FileRoutesByTo {
@@ -111,11 +111,11 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
   '/entry/$id': typeof EntryIdRoute
-  '/sign-in/$': typeof SignInSplatRoute
-  '/sign-up/$': typeof SignUpSplatRoute
   '/entry': typeof EntryIndexRoute
 }
 export interface FileRoutesById {
@@ -127,11 +127,11 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
   '/entry/$id': typeof EntryIdRoute
-  '/sign-in/$': typeof SignInSplatRoute
-  '/sign-up/$': typeof SignUpSplatRoute
   '/entry/': typeof EntryIndexRoute
 }
 export interface FileRouteTypes {
@@ -144,11 +144,11 @@ export interface FileRouteTypes {
     | '/home'
     | '/pricing'
     | '/privacy'
+    | '/sign-in'
+    | '/sign-up'
     | '/terms'
     | '/upgrade'
     | '/entry/$id'
-    | '/sign-in/$'
-    | '/sign-up/$'
     | '/entry/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -158,11 +158,11 @@ export interface FileRouteTypes {
     | '/home'
     | '/pricing'
     | '/privacy'
+    | '/sign-in'
+    | '/sign-up'
     | '/terms'
     | '/upgrade'
     | '/entry/$id'
-    | '/sign-in/$'
-    | '/sign-up/$'
     | '/entry'
   id:
     | '__root__'
@@ -173,11 +173,11 @@ export interface FileRouteTypes {
     | '/home'
     | '/pricing'
     | '/privacy'
+    | '/sign-in'
+    | '/sign-up'
     | '/terms'
     | '/upgrade'
     | '/entry/$id'
-    | '/sign-in/$'
-    | '/sign-up/$'
     | '/entry/'
   fileRoutesById: FileRoutesById
 }
@@ -189,10 +189,10 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
   TermsRoute: typeof TermsRoute
   UpgradeRoute: typeof UpgradeRoute
-  SignInSplatRoute: typeof SignInSplatRoute
-  SignUpSplatRoute: typeof SignUpSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -246,6 +246,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -274,20 +288,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntryIdRouteImport
       parentRoute: typeof EntryRoute
     }
-    '/sign-in/$': {
-      id: '/sign-in/$'
-      path: '/sign-in/$'
-      fullPath: '/sign-in/$'
-      preLoaderRoute: typeof SignInSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sign-up/$': {
-      id: '/sign-up/$'
-      path: '/sign-up/$'
-      fullPath: '/sign-up/$'
-      preLoaderRoute: typeof SignUpSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -311,10 +311,10 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
   TermsRoute: TermsRoute,
   UpgradeRoute: UpgradeRoute,
-  SignInSplatRoute: SignInSplatRoute,
-  SignUpSplatRoute: SignUpSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

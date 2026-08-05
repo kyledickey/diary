@@ -8,6 +8,13 @@
       "when": 1785022832291,
       "tag": "0000_breezy_plazm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785695776345,
+      "tag": "0001_better-auth",
+      "breakpoints": true
     }
   ]
 }

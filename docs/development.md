@@ -30,7 +30,7 @@ Database commands need `DB_URL` in the environment:
 
 ```bash
 DB_URL="postgresql://…" bun --filter @diary/database db:generate
-DB_URL="postgresql://…" bun --filter @diary/database db:migrate
+DB_URL="postgresql://…" bun run migrate
 DB_URL="postgresql://…" bun --filter @diary/database db:studio
 ```
 
@@ -72,23 +72,24 @@ directly.
 
 ## Tests
 
-Tests use `bun:test` and live beside the code as `*.test.ts`. All three current
-suites are in `apps/api`:
+Tests use `bun:test` and live beside the code as `*.test.ts`. Current coverage
+includes:
 
 | File | Covers |
 | --- | --- |
 | `src/lib/cipher.test.ts` | GCM round trip, legacy CBC decryption, tamper rejection |
 | `src/modules/documents/service.test.ts` | Ownership, plan gating, free-plan daily limit, encryption at the service boundary |
-| `src/modules/billing/service.test.ts` | Stripe customer reuse and Clerk metadata reconciliation |
+| `apps/web/src/lib/document-content.test.ts` | Legacy editor content normalization |
+| `apps/web/src/lib/document-draft.test.ts` | Draft lifecycle and save behavior |
+| `apps/web/src/lib/markdown-formatting.test.ts` | Markdown formatting commands |
 
 Every workspace's `test` script passes `--pass-with-no-tests`, so `bun test`
 succeeds in packages that have none.
 
-The pattern to follow: test services, not routes. `DocumentService` takes the
-`DocumentStore` interface, so `MemoryDocumentStore` exercises the real rules
-with no database, and `BillingService` takes `AuthService`/`UserService` so both
-can be replaced with hand-built doubles. Keep new business rules in the service
-layer and this stays cheap.
+The pattern to follow for API business rules is to test services rather than
+routes. `DocumentService` takes the `DocumentStore` interface, so
+`MemoryDocumentStore` exercises the real rules with no database. Keep new
+business rules in the service layer and this stays cheap.
 
 Run one file:
 
@@ -123,8 +124,8 @@ their dependencies in `apps/api/src/index.ts`.
 ### Change the database schema
 
 See [Data model → Migrations](./data-model.md#migrations). In short: edit
-`packages/database/src/schema.ts`, run `db:generate`, review the SQL, run
-`db:migrate`, and commit the SQL together with `drizzle/meta`.
+`packages/database/src/schema.ts`, run `bun run db:generate`, review the SQL,
+run `bun run migrate`, and commit the SQL together with `drizzle/meta`.
 
 If the change affects the initial schema used by the Compose image, note that
 `infra/Dockerfile` copies `0000_breezy_plazm.sql` by name — a rename there needs
@@ -150,11 +151,10 @@ first; the union is closed, so `trackAnalytics` will not typecheck otherwise.
 | Symptom | Likely cause |
 | --- | --- |
 | API exits at startup with a Zod error | A required variable is missing or malformed. See [Configuration](./configuration.md). |
-| API exits with "CLERK_WEBHOOK_SIGNING_SECRET … is required" | Neither that variable nor the legacy `CLERK_USER_WH_SECRET` is set |
-| Creating an entry returns 500, foreign key violation | No `users` row — the Clerk `user.created` webhook never arrived |
-| `POST /billing/portal` returns 404 | The user has no `stripe_customer_id`; provisioning did not complete |
+| Auth email returns an error | `RESEND_API_KEY`, the verified sender domain, or `AUTH_EMAIL_FROM` is incorrect |
+| Magic link redirects to the wrong host | `API_URL`, `WEB_URL`, or the browser's callback origin is incorrect |
+| Stripe checkout or portal fails | Stripe credentials, Plus price, or webhook configuration is missing or mismatched |
 | Every browser request fails CORS | `WEB_URL` on the API does not match the origin the browser loaded |
-| Requests 401 despite being signed in | Token issued for an origin outside `CLERK_AUTHORIZED_PARTIES`, or a different Clerk instance between web and API |
+| Requests return 401 despite signing in | The browser omitted credentials, cookies are blocked, or API/web origins are misconfigured |
 | Web app calls `localhost:8080` in production | `VITE_API_URL` was missing at **build** time; rebuild the image |
 | Entries fail to decrypt | `ENCRYPTION_KEY` changed. See [Security](./security.md#key-handling). |
-| `db:migrate` fails with "already exists" | The database was seeded by the Compose init script; that path bypasses Drizzle bookkeeping |

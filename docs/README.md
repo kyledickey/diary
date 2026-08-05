@@ -1,7 +1,8 @@
 # Diary documentation
 
 Diary is a private journaling application. Entries are written in a browser,
-stored encrypted in PostgreSQL, and gated by a Clerk-authenticated Stripe plan.
+stored encrypted in PostgreSQL, and gated by a Better Auth session and Stripe
+subscription state.
 
 This directory is the single documentation source for the whole monorepo. Start
 here, then follow the guide that matches the task.
@@ -19,6 +20,7 @@ here, then follow the guide that matches the task.
 | [Development](./development.md) | Run commands, tests, and common change recipes |
 | [Deployment](./deployment.md) | Build images, run Compose, or deploy to Railway |
 | [Security](./security.md) | Reason about auth, ownership, encryption, and secrets |
+| [Auth provider migration](./migrating-from-clerk.md) | Perform the one-time production auth and billing cutover |
 
 ## Repository layout
 

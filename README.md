@@ -17,23 +17,23 @@ is scoped to the signed-in owner, and the writing surface is deliberately plain
   so you never press save.
 - **Encrypted at rest** — entry content is stored as AES-256-GCM ciphertext, so
   a database dump contains no readable text.
-- **Accounts and billing** through Clerk and Stripe. The free plan allows one
-  entry per day; Plus removes the limit and unlocks editable titles.
+- **Passwordless accounts** through Better Auth and Resend, with magic links
+  and a one-time-code fallback. Stripe powers the optional Plus plan.
 - **Light and dark themes**, server-side rendering, and a mobile layout.
 
 ## Tech stack
 
-| Layer                       | Choice                                                                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime and package manager | [Bun](https://bun.sh/)                                                                                                         |
-| Monorepo tasks              | [Turborepo](https://turbo.build/)                                                                                              |
-| Web                         | [TanStack Start](https://tanstack.com/start), React 19, TanStack Query, Tailwind CSS, shadcn/ui, [Plate](https://platejs.org/) |
-| API                         | [Elysia](https://elysiajs.com/)                                                                                                |
-| Database                    | PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)                                                                       |
-| Auth                        | [Clerk](https://clerk.com/)                                                                                                    |
-| Payments                    | [Stripe](https://stripe.com/)                                                                                                  |
-| Validation                  | [Zod](https://zod.dev/) contracts shared by both apps                                                                          |
-| Lint and format             | [Biome](https://biomejs.dev/)                                                                                                  |
+| Layer                       | Choice                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Runtime and package manager | [Bun](https://bun.sh/)                                                                                      |
+| Monorepo tasks              | [Turborepo](https://turbo.build/)                                                                           |
+| Web                         | [TanStack Start](https://tanstack.com/start), React 19, TanStack Query, Tailwind CSS, shadcn/ui, CodeMirror |
+| API                         | [Elysia](https://elysiajs.com/)                                                                             |
+| Database                    | PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)                                                    |
+| Auth                        | [Better Auth](https://better-auth.com/) with [Resend](https://resend.com/)                                  |
+| Payments                    | [Stripe](https://stripe.com/)                                                                               |
+| Validation                  | [Zod](https://zod.dev/) contracts shared by both apps                                                       |
+| Lint and format             | [Biome](https://biomejs.dev/)                                                                               |
 
 ## Project structure
 
@@ -48,8 +48,8 @@ infra               PostgreSQL image with the initial Diary schema
 docs                Full developer documentation
 ```
 
-The browser talks to the API directly with a Clerk session token; the web server
-renders UI and never proxies entry data.
+The browser talks to the API directly with a Better Auth session cookie; the
+web server renders UI and never proxies entry data.
 
 ## Getting started
 
@@ -57,14 +57,12 @@ renders UI and never proxies entry data.
 
 - [Bun](https://bun.sh/) 1.3.14 or newer
 - PostgreSQL — use the Compose service in this repository or your own server
-- A [Clerk](https://clerk.com/) application (a development instance is fine)
-- A [Stripe](https://stripe.com/) account with two prices: one for the free plan
-  and one for Plus
+- A [Resend](https://resend.com/) API key and verified sending domain
+- A [Stripe](https://stripe.com/) account with one recurring Plus price
 - Docker, if you want the Compose database or the full container stack
 
-Diary cannot run against stubs. The API refuses to start without every
-credential, accounts are created by a Clerk webhook, and sign-up provisioning
-calls Stripe directly.
+The API validates its database, Better Auth, Resend, encryption, and Stripe
+configuration at startup. Use test-mode Stripe credentials locally.
 
 ### 1. Install
 
@@ -80,8 +78,8 @@ bun install
 cp .env.example .env
 ```
 
-Fill in the Clerk keys, the Clerk webhook signing secret, `ENCRYPTION_KEY`, and
-the four Stripe values. Every variable is documented in
+Fill in `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `ENCRYPTION_KEY`, and the Stripe
+values. Every variable is documented in
 [docs/configuration.md](./docs/configuration.md).
 
 Keep all secret API values server-side in the API environment. Only `VITE_*`
@@ -91,37 +89,23 @@ both applications.
 
 ### 3. Start PostgreSQL
 
-Either bring up the Compose database, which ships with the schema baked in:
+Bring up the Compose database, then apply all checked-in migrations:
 
 ```bash
-docker compose up infra
+docker compose up -d infra
+bun run migrate
 ```
 
-Or point `DB_URL` at your own empty database and apply the migrations:
+`bun run migrate` also works with an empty external PostgreSQL database. It
+recognizes an older Compose schema and safely records its initial migration
+before applying newer migrations.
 
-```bash
-DB_URL="postgresql://diary:password@localhost:5432/diary" \
-  bun --filter @diary/database db:migrate
-```
+### 4. Connect Stripe
 
-Pick one. The Compose image seeds the schema through an init script that does
-not populate Drizzle's migration bookkeeping, so running `db:migrate` against it
-will fail on tables that already exist.
-
-### 4. Connect the webhooks
-
-**This step is required.** Account rows are written only by the Clerk webhook
-handler, and `documents.owner_id` is a foreign key to `users.id` — until a
-`user.created` event reaches the API, a signed-in account cannot create entries.
-
-Expose the local API with a tunnel, then register:
-
-- **Clerk** → `https://<tunnel-host>/auth/webhook/user` for `user.created`,
-  `user.updated`, and `user.deleted`. Copy the signing secret into
-  `CLERK_WEBHOOK_SIGNING_SECRET`.
-- **Stripe** → `https://<tunnel-host>/stripe/webhook` for
-  `customer.subscription.updated` and `customer.subscription.deleted`. Copy the
-  secret into `STRIPE_WEBHOOK_SECRET`.
+Expose the local API with a tunnel, then point Stripe at
+`https://<tunnel-host>/api/auth/stripe/webhook`. Copy the endpoint signing
+secret into `STRIPE_WEBHOOK_SECRET`. Better Auth verifies the webhook and keeps
+the local `subscriptions` table synchronized.
 
 ### 5. Run
 
@@ -139,9 +123,9 @@ curl http://localhost:8080/health
 # {"status":"ok","timestamp":"..."}
 ```
 
-Sign up at `http://localhost:3000`, confirm a row appears in `users` with a
-`stripe_customer_id`, then create an entry and type into it — the header shows
-"Saving" and settles on "Edited …". The generated API reference is at
+Sign up at `http://localhost:3000` using a magic link or one-time code, then
+create an entry and type into it — the header shows "Saving" and settles on
+"Edited …". The generated API reference is at
 `http://localhost:8080/openapi`.
 
 ## Commands
@@ -168,8 +152,8 @@ Database commands are routed through the database package and read `DB_URL` from
 the environment:
 
 ```bash
-bun --filter @diary/database db:generate   # generate SQL from the schema
-bun --filter @diary/database db:migrate    # apply migrations
+bun run db:generate                        # generate SQL from the schema
+bun run migrate                            # apply migrations
 bun --filter @diary/database db:studio     # browse the data
 ```
 
@@ -197,7 +181,9 @@ Run the complete stack through Compose:
 
 ```bash
 cp .env.example .env
-# Fill in the Clerk, Stripe, encryption, and database values in .env.
+# Fill in the Better Auth, Resend, Stripe, encryption, and database values.
+docker compose up -d infra
+bun run migrate
 docker compose up --build
 ```
 
@@ -214,7 +200,6 @@ docker build -f apps/api/Dockerfile -t diary-api .
 docker build \
   -f apps/web/Dockerfile \
   --build-arg VITE_API_URL=http://localhost:8080 \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_replace_me \
   -t diary-web .
 ```
 
@@ -253,7 +238,7 @@ Full documentation lives in [docs/](./docs/README.md):
 | [Getting started](./docs/getting-started.md) | First run, end to end                 |
 | [Architecture](./docs/architecture.md)       | Services, boundaries, runtime flows   |
 | [Configuration](./docs/configuration.md)     | Every environment variable            |
-| [HTTP API](./docs/api.md)                    | Endpoints, errors, webhooks           |
+| [HTTP API](./docs/api.md)                    | Auth, documents, billing, errors      |
 | [Data model](./docs/data-model.md)           | Schema, migrations, ciphertext format |
 | [Web application](./docs/web-app.md)         | Routes, data layer, editor            |
 | [Development](./docs/development.md)         | Commands, tests, change recipes       |
@@ -262,11 +247,9 @@ Full documentation lives in [docs/](./docs/README.md):
 
 ## Security
 
-- Clerk session tokens are verified at the API boundary.
+- Better Auth sessions are resolved from HTTP-only cookies at the API boundary.
 - Every entry lookup and mutation is scoped to the authenticated owner.
-- New entry content uses authenticated AES-256-GCM encryption.
-- Existing AES-256-CBC entries remain readable and are upgraded to GCM the next
-  time they are saved.
+- Entry content uses authenticated AES-256-GCM encryption.
 - Stripe portal sessions are created from the authenticated user's stored
   customer ID; customer IDs are never trusted from browser input.
 

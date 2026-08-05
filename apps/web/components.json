@@ -4,14 +4,21 @@
     "rsc": false,
     "tsx": true,
     "tailwind": {
-        "config": "tailwind.config.ts",
+        "config": "",
         "css": "src/styles/globals.css",
         "baseColor": "zinc",
         "cssVariables": true,
         "prefix": ""
     },
+    "iconLibrary": "lucide",
     "aliases": {
         "components": "@/components",
+        "ui": "@/components/ui",
+        "hooks": "@/hooks",
+        "lib": "@/lib",
         "utils": "@/lib/utils"
+    },
+    "registries": {
+        "@coss": "https://coss.com/ui/r/{name}.json"
     }
 }

@@ -5,20 +5,14 @@ import type { Env } from "./config/env";
 import { AppError } from "./lib/errors";
 import type { Logger } from "./lib/logger";
 import type { AuthService } from "./modules/auth/service";
-import { billingRoutes, stripeWebhookRoutes } from "./modules/billing/routes";
-import type { BillingService } from "./modules/billing/service";
 import { documentRoutes } from "./modules/documents/routes";
 import type { DocumentService } from "./modules/documents/service";
-import type { UserService } from "./modules/users/service";
-import { clerkWebhookRoutes } from "./modules/webhooks/clerk";
 
 export interface AppDependencies {
     env: Env;
     logger: Logger;
     auth: AuthService;
     documents: DocumentService;
-    billing: BillingService;
-    users: UserService;
 }
 
 export function createApp(dependencies: AppDependencies) {
@@ -26,8 +20,9 @@ export function createApp(dependencies: AppDependencies) {
         .use(
             cors({
                 origin: dependencies.env.webUrl,
-                allowedHeaders: ["Authorization", "Content-Type"],
-                methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+                allowedHeaders: ["Content-Type"],
+                methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                credentials: true,
                 maxAge: 86_400
             })
         )
@@ -90,14 +85,6 @@ export function createApp(dependencies: AppDependencies) {
             status: "ok",
             timestamp: new Date().toISOString()
         }))
-        .use(documentRoutes(dependencies.auth, dependencies.documents))
-        .use(billingRoutes(dependencies.auth, dependencies.billing))
-        .use(stripeWebhookRoutes(dependencies.billing))
-        .use(
-            clerkWebhookRoutes(
-                dependencies.env.clerk.webhookSecret,
-                dependencies.users,
-                dependencies.billing
-            )
-        );
+        .mount(dependencies.auth.auth.handler)
+        .use(documentRoutes(dependencies.auth, dependencies.documents));
 }

@@ -1,12 +1,11 @@
+import "@fontsource-variable/geist-mono";
 import "@fontsource-variable/inter";
 import "@fontsource/averia-serif-libre/300.css";
 import "@fontsource/averia-serif-libre/400.css";
 import "@fontsource/averia-serif-libre/700.css";
-import "@fontsource-variable/jetbrains-mono";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import Providers from "@/components/providers";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast";
 import { ErrorPage, NotFoundPage } from "@/pages/error-pages";
 import appCss from "@/styles/globals.css?url";
 
@@ -82,18 +81,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <head>
                 <HeadContent />
             </head>
-            <body className="bg-background min-h-screen overflow-auto font-sans antialiased">
-                <Providers>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="dark"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        {children}
-                        <Toaster richColors position="top-right" />
-                    </ThemeProvider>
-                </Providers>
+            <body className="relative isolate min-h-screen overflow-auto bg-background font-sans antialiased">
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="dark"
+                    enableSystem
+                    disableTransitionOnChange
+                >
+                    <ToastProvider position="top-right">
+                        <AnchoredToastProvider>{children}</AnchoredToastProvider>
+                    </ToastProvider>
+                </ThemeProvider>
                 <Scripts />
             </body>
         </html>

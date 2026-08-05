@@ -1,8 +1,8 @@
-import Link from "@/components/link";
+import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import {
     Card,
-    CardContent,
+    CardPanel,
     CardDescription,
     CardFooter,
     CardHeader,
@@ -19,14 +19,14 @@ export function ErrorPage({ error, reset }: { error: Error; reset(): void }) {
                     </CardTitle>
                     <CardDescription>{error.message}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                    <Button asChild className="w-full">
-                        <Link href="/">Go back home</Link>
+                <CardPanel className="flex flex-col gap-2">
+                    <Button render={<Link href="/" />} className="w-full">
+                        Go back home
                     </Button>
                     <Button variant="secondary" className="w-full" onClick={reset}>
                         Retry
                     </Button>
-                </CardContent>
+                </CardPanel>
                 <CardFooter>
                     <p className="text-foreground/60 font-mono text-sm">Error Code: 500</p>
                 </CardFooter>
@@ -43,11 +43,11 @@ export function NotFoundPage() {
                     <CardTitle className="font-serif text-2xl font-bold">Are you lost?</CardTitle>
                     <CardDescription>The page you are looking for does not exist.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Button asChild className="w-full">
-                        <Link href="/">Go back home</Link>
+                <CardPanel>
+                    <Button render={<Link href="/" />} className="w-full">
+                        Go back home
                     </Button>
-                </CardContent>
+                </CardPanel>
                 <CardFooter>
                     <p className="text-foreground/60 font-mono text-sm">Error Code: 404</p>
                 </CardFooter>

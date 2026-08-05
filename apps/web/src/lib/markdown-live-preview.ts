@@ -57,6 +57,16 @@ export const markdownLivePreview: Extension = [
         },
         blur(_event, view) {
             view.dispatch({ effects: setEditorFocused.of(false) });
+        },
+        mousedown(event) {
+            const link = getLivePreviewLink(event.target);
+            if (!link || (!event.metaKey && !event.ctrlKey)) {
+                return false;
+            }
+
+            event.preventDefault();
+            window.open(link.href, "_blank", "noopener,noreferrer");
+            return true;
         }
     })
 ];
@@ -66,7 +76,7 @@ export function createMarkdownEditorTheme(metadata: DocumentMetadata): Extension
         "&": {
             width: "100%",
             backgroundColor: "transparent",
-            color: "inherit",
+            color: "var(--foreground)",
             fontFamily: "inherit",
             fontSize: `${metadata.font_size}px`
         },
@@ -90,14 +100,14 @@ export function createMarkdownEditorTheme(metadata: DocumentMetadata): Extension
             borderLeftColor: "currentColor"
         },
         ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-            backgroundColor: "hsl(var(--primary) / 0.18)"
+            backgroundColor: "color-mix(in srgb, var(--primary) 18%, transparent)"
         },
         ".cm-placeholder": {
-            color: "hsl(var(--foreground) / 0.35)",
+            color: "color-mix(in srgb, var(--foreground) 35%, transparent)",
             fontStyle: "normal"
         },
         ".cm-live-heading": {
-            color: "hsl(var(--foreground))",
+            color: "var(--foreground)",
             fontWeight: "700",
             lineHeight: "1.35",
             paddingTop: "0.35em"
@@ -124,17 +134,27 @@ export function createMarkdownEditorTheme(metadata: DocumentMetadata): Extension
             fontStyle: "italic"
         },
         ".cm-live-marker": {
-            color: "hsl(var(--foreground) / 0.35)"
+            color: "color-mix(in srgb, var(--foreground) 35%, transparent)"
+        },
+        ".cm-live-link": {
+            color: "var(--foreground)",
+            cursor: "pointer",
+            textDecoration: "underline",
+            textDecorationColor: "color-mix(in srgb, var(--foreground) 40%, transparent)",
+            textUnderlineOffset: "0.16em"
+        },
+        ".cm-live-url, .cm-live-url *": {
+            color: "color-mix(in srgb, var(--foreground) 72%, transparent) !important"
         },
         ".cm-live-bullet": {
             display: "inline-block",
             width: "1ch",
-            color: "hsl(var(--foreground) / 0.7)"
+            color: "color-mix(in srgb, var(--foreground) 70%, transparent)"
         },
         ".cm-live-quote": {
-            borderLeft: "2px solid hsl(var(--primary) / 0.4)",
+            borderLeft: "2px solid color-mix(in srgb, var(--primary) 40%, transparent)",
             paddingLeft: "0.75rem",
-            color: "hsl(var(--foreground) / 0.65)",
+            color: "color-mix(in srgb, var(--foreground) 65%, transparent)",
             fontStyle: "italic"
         }
     });
@@ -147,7 +167,9 @@ function buildLivePreview(state: EditorState, focused: boolean): DecorationSet {
     syntaxTree(state).iterate({
         enter(node) {
             const { name } = node.type;
-            const activeRange = node.node.parent ?? node;
+            // Keep markdown syntax visible while the cursor is inside it.
+            const activeRange =
+                name === "Link" || name === "Autolink" ? node.node : (node.node.parent ?? node);
             const active =
                 focused &&
                 state.selection.ranges.some(
@@ -180,6 +202,12 @@ function buildLivePreview(state: EditorState, focused: boolean): DecorationSet {
                     decoratedLines,
                     decorations
                 );
+            } else if ((name === "Link" || name === "Autolink") && !active) {
+                addLinkDecorations(state, node.node, decorations);
+            } else if (name === "URL") {
+                decorations.push(
+                    Decoration.mark({ class: "cm-live-url" }).range(node.from, node.to)
+                );
             } else if (name === "ListMark") {
                 const marker = state.sliceDoc(node.from, node.to).trim();
                 if (!active && ["-", "*", "+"].includes(marker)) {
@@ -205,6 +233,78 @@ function buildLivePreview(state: EditorState, focused: boolean): DecorationSet {
     });
 
     return Decoration.set(decorations, true);
+}
+
+function addLinkDecorations(
+    state: EditorState,
+    linkNode: ReturnType<typeof syntaxTree>["topNode"],
+    decorations: Range<Decoration>[]
+) {
+    const marks: { from: number; to: number }[] = [];
+    let urlRange: { from: number; to: number } | undefined;
+
+    for (let child = linkNode.firstChild; child; child = child.nextSibling) {
+        if (child.type.name === "LinkMark") {
+            marks.push({ from: child.from, to: child.to });
+        } else if (child.type.name === "URL") {
+            urlRange = { from: child.from, to: child.to };
+        }
+    }
+
+    if (!urlRange) {
+        return;
+    }
+
+    const href = safeLinkHref(state.sliceDoc(urlRange.from, urlRange.to));
+    if (!href) {
+        return;
+    }
+
+    const isAutolink = linkNode.type.name === "Autolink";
+    const labelFrom = isAutolink ? urlRange.from : marks[0]?.to;
+    const labelTo = isAutolink ? urlRange.to : marks[1]?.from;
+    if (labelFrom === undefined || labelTo === undefined || labelFrom >= labelTo) {
+        return;
+    }
+
+    if (linkNode.from < labelFrom) {
+        decorations.push(Decoration.replace({}).range(linkNode.from, labelFrom));
+    }
+    if (labelTo < linkNode.to) {
+        decorations.push(Decoration.replace({}).range(labelTo, linkNode.to));
+    }
+    decorations.push(
+        Decoration.mark({
+            tagName: "a",
+            class: "cm-live-link",
+            attributes: {
+                href,
+                rel: "noopener noreferrer",
+                target: "_blank",
+                title: "Cmd/Ctrl-click to open link"
+            }
+        }).range(labelFrom, labelTo)
+    );
+}
+
+function safeLinkHref(value: string): string | undefined {
+    const href = value.trim();
+    // Do not turn scriptable URL schemes into clickable links.
+    if (
+        /^(?:https?:|mailto:)/i.test(href) ||
+        href.startsWith("/") ||
+        href.startsWith("./") ||
+        href.startsWith("../") ||
+        href.startsWith("#") ||
+        href.startsWith("?")
+    ) {
+        return href;
+    }
+    return undefined;
+}
+
+function getLivePreviewLink(target: EventTarget | null): HTMLAnchorElement | null {
+    return target instanceof Element ? target.closest<HTMLAnchorElement>("a.cm-live-link") : null;
 }
 
 function addBlockLineDecorations(

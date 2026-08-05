@@ -13,6 +13,9 @@
         "build": "turbo build",
         "check": "turbo check",
         "test": "turbo test",
+        "migrate": "bun --env-file=.env apps/api/src/migrate.ts",
+        "migrate:clerk": "bun --filter @diary/api migrate:clerk",
+        "db:generate": "bun --env-file=.env --filter @diary/database db:generate",
         "format": "biome format --write .",
         "lint": "biome lint ."
     },

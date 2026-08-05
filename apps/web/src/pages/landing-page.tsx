@@ -1,18 +1,20 @@
-import { useAuth } from "@clerk/tanstack-react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
-import Clouds from "@/components/clouds";
-import Footer from "@/components/footer";
-import Link from "@/components/link";
-import Navbar from "@/components/navbar";
+import Clouds from "@/components/landing/clouds";
+import Footer from "@/components/layout/footer";
+import Navbar from "@/components/layout/navbar";
+import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/lib/analytics";
+import { authClient } from "@/lib/auth-client";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 export function LandingPage() {
-    const { isLoaded, isSignedIn } = useAuth();
+    const session = authClient.useSession();
+    const isLoaded = !session.isPending;
+    const isSignedIn = Boolean(session.data?.user);
     const navigate = useNavigate();
     const track = useAnalytics();
 
@@ -107,17 +109,32 @@ function Hero() {
                 </p>
             </Rise>
 
-            <Rise className="mt-8 w-full max-w-sm">
-                <div className="flex w-full flex-col items-center justify-center gap-3 sm:flex-row">
-                    <Button className="w-full" asChild>
-                        <Link href="/sign-up" onClick={() => track("home_page_get_started_click")}>
-                            Get Started
-                        </Link>
+            <Rise className="mt-8 w-fit">
+                <div className="flex w-fit flex-col items-center justify-center gap-3 sm:flex-row">
+                    <Button
+                        className="w-full"
+                        size="lg"
+                        render={
+                            <Link
+                                href="/sign-up"
+                                onClick={() => track("home_page_get_started_click")}
+                            />
+                        }
+                    >
+                        Get Started
                     </Button>
-                    <Button variant="outline" className="w-full" asChild>
-                        <Link href="/sign-in" onClick={() => track("home_page_sign_in_click")}>
-                            Sign in
-                        </Link>
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        size="lg"
+                        render={
+                            <Link
+                                href="/sign-in"
+                                onClick={() => track("home_page_sign_in_click")}
+                            />
+                        }
+                    >
+                        Sign in
                     </Button>
                 </div>
             </Rise>
@@ -129,8 +146,6 @@ function Hero() {
     );
 }
 
-// The opening statement, read one word at a time. Dim clauses carry the sentence; lit ones carry
-// the product.
 const PASSAGE: { text: string; lit?: boolean }[] = [
     { text: "Diary" },
     { text: "opens to a blank page", lit: true },
@@ -298,18 +313,23 @@ function Invitation() {
                 </p>
             </Reveal>
             <Reveal delay={0.24}>
-                <Button className="mt-4 px-10" asChild>
-                    <Link href="/sign-up" onClick={() => track("home_page_get_started_click")}>
-                        Get Started
-                    </Link>
+                <Button
+                    className="mt-4 px-10"
+                    render={
+                        <Link
+                            href="/sign-up"
+                            onClick={() => track("home_page_get_started_click")}
+                        />
+                    }
+                >
+                    Get Started
                 </Button>
             </Reveal>
         </section>
     );
 }
 
-// Entries are titled with the day they were written, so the closing page is dated the same way.
-// Formatted after mount to keep the server and client markup identical.
+// Format the local date after mount to avoid a hydration mismatch.
 function useToday() {
     const [today, setToday] = useState("Today");
 
@@ -350,7 +370,6 @@ function Reveal({
     );
 }
 
-// A headline line: same entrance as Rise, but inline-safe so it can live inside an h1.
 function RiseLine({ children }: { children: React.ReactNode }) {
     const reduceMotion = useReducedMotion();
 
