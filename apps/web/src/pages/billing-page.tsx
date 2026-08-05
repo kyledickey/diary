@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Spinner from "@/components/ui/spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 
 export function BillingPage({ action }: { action: "manage" | "upgrade" }) {
