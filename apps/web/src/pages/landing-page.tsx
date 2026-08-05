@@ -109,8 +109,8 @@ function Hero() {
                 </p>
             </Rise>
 
-            <Rise className="mt-8 w-fit">
-                <div className="flex w-fit flex-col items-center justify-center gap-3 sm:flex-row">
+            <Rise className="mt-8 w-full sm:w-fit">
+                <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-fit sm:flex-row">
                     <Button
                         className="w-full"
                         size="lg"

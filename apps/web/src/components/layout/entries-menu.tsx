@@ -1,6 +1,6 @@
 import type { DocumentSummary } from "@diary/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { PinIcon, PlusIcon, XIcon } from "lucide-react";
+import { MenuIcon, PinIcon, PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AccountDropdown from "@/components/account/account-dropdown";
 import { Button } from "@/components/ui/button";
@@ -78,11 +78,7 @@ export default function EntriesMenu({ dimmed = false }: EntriesMenuProps) {
                 className="md:hidden"
                 onClick={() => setOpenMobile((value) => !value)}
             >
-                {openMobile ? (
-                    <XIcon aria-hidden="true" />
-                ) : (
-                    <span className="font-serif text-sm leading-none">{today.day}</span>
-                )}
+                {openMobile ? <XIcon aria-hidden="true" /> : <MenuIcon aria-hidden="true" />}
             </Button>
 
             <aside
@@ -99,7 +95,7 @@ export default function EntriesMenu({ dimmed = false }: EntriesMenuProps) {
                 <div className="relative flex min-h-0 flex-col rounded-lg border bg-popover bg-clip-padding p-2 text-popover-foreground shadow-xs/5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]">
                     <div className="flex items-center justify-between gap-2 px-2 pt-1 pb-2">
                         <p className="min-w-0 truncate font-serif text-sm italic text-muted-foreground">
-                            {today.full}
+                            {today}
                         </p>
                         <Button
                             type="button"
@@ -226,18 +222,17 @@ function groupByMonth(documents: DocumentSummary[]) {
 
 // Format the local date after mount to avoid a hydration mismatch.
 function useToday() {
-    const [today, setToday] = useState({ full: "Today", day: "·" });
+    const [today, setToday] = useState("Today");
 
     useEffect(() => {
         const now = new Date();
-        setToday({
-            full: now.toLocaleDateString("en-US", {
+        setToday(
+            now.toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric"
-            }),
-            day: String(now.getDate())
-        });
+            })
+        );
     }, []);
 
     return today;

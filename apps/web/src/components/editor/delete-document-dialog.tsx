@@ -76,12 +76,14 @@ export default function DeleteDocumentDialog({
                     </p>
                 </DialogPanel>
                 <DialogFooter className="gap-2">
-                    <DialogClose render={<Button variant="secondary" className="w-1/2" />}>
+                    <DialogClose
+                        render={<Button variant="secondary" className="w-full sm:w-1/2" />}
+                    >
                         Cancel
                     </DialogClose>
                     <Button
                         variant="destructive"
-                        className="w-1/2"
+                        className="w-full sm:w-1/2"
                         loading={deleteDocument.isPending}
                         onClick={confirmDelete}
                     >
