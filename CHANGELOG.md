@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [v1.2.0](https://github.com/kyledickey/diary/releases/tag/v1.2.0) - August 5, 2026
 
 ### Added
 
