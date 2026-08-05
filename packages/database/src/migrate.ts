@@ -26,20 +26,33 @@ export async function baselineLegacySchema(
 
     try {
         const [databaseState] = await client<
-            Array<{ documents: string | null; users: string | null; migrationCount: number }>
+            Array<{
+                documents: string | null;
+                users: string | null;
+                migrations: string | null;
+            }>
         >`
             SELECT
                 to_regclass('public.documents')::text AS documents,
                 to_regclass('public.users')::text AS users,
-                CASE
-                    WHEN to_regclass('drizzle.__drizzle_migrations') IS NULL THEN 0
-                    ELSE (SELECT count(*)::int FROM drizzle.__drizzle_migrations)
-                END AS "migrationCount"
+                to_regclass('drizzle.__drizzle_migrations')::text AS migrations
         `;
         if (!databaseState) {
             throw new Error("Could not inspect the database migration state");
         }
-        const { documents, users, migrationCount } = databaseState;
+        const { documents, users, migrations } = databaseState;
+        let migrationCount = 0;
+
+        if (migrations) {
+            const [migrationState] = await client<Array<{ migrationCount: number }>>`
+                SELECT count(*)::int AS "migrationCount"
+                FROM drizzle.__drizzle_migrations
+            `;
+            if (!migrationState) {
+                throw new Error("Could not inspect the migration history");
+            }
+            migrationCount = migrationState.migrationCount;
+        }
 
         if (migrationCount > 0 || (!documents && !users)) {
             return;
