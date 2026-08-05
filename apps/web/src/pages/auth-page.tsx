@@ -1,4 +1,4 @@
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,35 +15,34 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
-type AuthStep = "email" | "magic-link-sent" | "otp";
+type AuthStep = "email" | "otp";
+const resendCooldownSeconds = 60;
 
 export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [step, setStep] = useState<AuthStep>("email");
     const [error, setError] = useState<string | null>(null);
+    const [resendCooldown, setResendCooldown] = useState(0);
     const [isPending, startTransition] = useTransition();
 
-    function sendMagicLink(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setError(null);
-        startTransition(async () => {
-            const webOrigin = window.location.origin;
-            const { error: authError } = await authClient.signIn.magicLink({
-                email,
-                callbackURL: `${webOrigin}/entry`,
-                newUserCallbackURL: `${webOrigin}/entry`,
-                errorCallbackURL: `${webOrigin}/${mode}`
-            });
-            if (authError) {
-                setError(authError.message ?? "Could not send your sign-in link");
-                return;
-            }
-            setStep("magic-link-sent");
-        });
-    }
+    useEffect(() => {
+        if (resendCooldown === 0) {
+            return;
+        }
 
-    function sendOtp() {
+        const timer = window.setTimeout(() => {
+            setResendCooldown((current) => Math.max(0, current - 1));
+        }, 1000);
+
+        return () => window.clearTimeout(timer);
+    }, [resendCooldown]);
+
+    function sendOtp(event?: React.FormEvent<HTMLFormElement>) {
+        event?.preventDefault();
+        if (isPending || resendCooldown > 0) {
+            return;
+        }
         setError(null);
         startTransition(async () => {
             const { error: authError } = await authClient.emailOtp.sendVerificationOtp({
@@ -54,6 +53,7 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                 setError(authError.message ?? "Could not send your sign-in code");
                 return;
             }
+            setResendCooldown(resendCooldownSeconds);
             setStep("otp");
         });
     }
@@ -80,19 +80,23 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                 <Card>
                     <CardHeader className="border-b">
                         <CardTitle className="font-serif text-2xl font-bold">
-                            {step === "email" ? "Welcome to your Diary" : "Check your inbox"}
+                            {step === "email"
+                                ? mode === "sign-up"
+                                    ? "Create your Diary"
+                                    : "Welcome to your Diary"
+                                : "Check your inbox"}
                         </CardTitle>
                         <CardDescription>
                             {step === "email"
-                                ? "Enter your email and we’ll send a link to sign in or create an account."
-                                : step === "otp"
-                                  ? `Enter the six-digit code sent to ${email}.`
-                                  : `We sent a link to ${email}.`}
+                                ? `Enter your email and we’ll send a six-digit code to ${
+                                      mode === "sign-up" ? "create your account" : "sign in"
+                                  }.`
+                                : `Enter the six-digit code sent to ${email}.`}
                         </CardDescription>
                     </CardHeader>
                     <CardPanel>
                         {step === "email" ? (
-                            <Form className="flex flex-col gap-4" onSubmit={sendMagicLink}>
+                            <Form className="flex flex-col gap-4" onSubmit={sendOtp}>
                                 <Field name="email">
                                     <FieldLabel>Email</FieldLabel>
                                     <Input
@@ -106,8 +110,15 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                                         autoFocus
                                     />
                                 </Field>
-                                <Button className="w-full" type="submit" loading={isPending}>
-                                    Email me a link
+                                <Button
+                                    className="w-full"
+                                    type="submit"
+                                    loading={isPending}
+                                    disabled={resendCooldown > 0}
+                                >
+                                    {resendCooldown > 0
+                                        ? `Try again in ${resendCooldown}s`
+                                        : "Email me a code"}
                                 </Button>
                             </Form>
                         ) : step === "otp" ? (
@@ -139,25 +150,7 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                                     Sign in
                                 </Button>
                             </Form>
-                        ) : (
-                            <div className="flex flex-col gap-3">
-                                <Button
-                                    className="w-full"
-                                    variant="outline"
-                                    onClick={sendOtp}
-                                    disabled={isPending}
-                                >
-                                    {isPending ? "Sending…" : "Use a one-time code instead"}
-                                </Button>
-                                <Button
-                                    className="w-full"
-                                    variant="ghost"
-                                    onClick={() => setStep("email")}
-                                >
-                                    Use a different email
-                                </Button>
-                            </div>
-                        )}
+                        ) : null}
 
                         {error ? (
                             <p className="mt-4 text-sm text-destructive-foreground">{error}</p>
@@ -167,10 +160,25 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                             <Button
                                 className="mt-2 w-full"
                                 variant="ghost"
-                                onClick={sendOtp}
-                                disabled={isPending}
+                                onClick={() => sendOtp()}
+                                disabled={isPending || resendCooldown > 0}
                             >
-                                Send a new code
+                                {resendCooldown > 0
+                                    ? `Send a new code in ${resendCooldown}s`
+                                    : "Send a new code"}
+                            </Button>
+                        ) : null}
+                        {step === "otp" ? (
+                            <Button
+                                className="w-full"
+                                variant="ghost"
+                                onClick={() => {
+                                    setOtp("");
+                                    setError(null);
+                                    setStep("email");
+                                }}
+                            >
+                                Use a different email
                             </Button>
                         ) : null}
                     </CardPanel>

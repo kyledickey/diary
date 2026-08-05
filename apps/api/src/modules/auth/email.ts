@@ -3,6 +3,7 @@ import { Resend } from "resend";
 interface AuthEmailConfig {
     apiKey: string;
     from: string;
+    webUrl: string;
 }
 
 export class AuthEmailService {
@@ -10,30 +11,6 @@ export class AuthEmailService {
 
     constructor(private readonly config: AuthEmailConfig) {
         this.resend = new Resend(config.apiKey);
-    }
-
-    async sendMagicLink(email: string, url: string): Promise<void> {
-        const safeUrl = escapeHtml(url);
-        await this.send({
-            to: email,
-            subject: "Your Diary sign-in link",
-            text: [
-                "Sign in to Diary",
-                "",
-                "Open this private link to sign in:",
-                url,
-                "",
-                "This link expires in 10 minutes and can only be used once.",
-                "If you did not request it, you can ignore this email."
-            ].join("\n"),
-            html: authEmailLayout({
-                eyebrow: "DIARY",
-                title: "A quiet way back in.",
-                body: "Use this private link to return to your journal. It expires in 10 minutes and can only be used once.",
-                action: `<a href="${safeUrl}" style="display:inline-block;border-radius:999px;background:#171717;color:#ffffff;padding:12px 22px;text-decoration:none;font-size:14px;font-weight:600">Open Diary</a>`,
-                fallback: `Or copy this link into your browser:<br><a href="${safeUrl}" style="color:#525252;word-break:break-all">${safeUrl}</a>`
-            })
-        });
     }
 
     async sendOtp(email: string, otp: string): Promise<void> {
@@ -47,13 +24,14 @@ export class AuthEmailService {
                 `Your one-time code is ${otp}.`,
                 "",
                 "This code expires in 10 minutes.",
-                "If you did not request it, you can ignore this email."
+                "If you did not request it, you can ignore this email.",
+                "",
+                this.config.webUrl
             ].join("\n"),
-            html: authEmailLayout({
-                eyebrow: "DIARY",
-                title: "Your sign-in code.",
-                body: "Enter this code in Diary. It expires in 10 minutes.",
-                action: `<div style="display:inline-block;border-radius:14px;background:#f5f5f4;padding:14px 22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:0.24em;color:#171717">${safeOtp}</div>`
+            html: this.layout({
+                title: "Your sign-in code",
+                body: "Enter this six-digit code in Diary. It expires in 10 minutes.",
+                action: `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:16px;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:0.32em;color:#262626">${safeOtp}</div>`
             })
         });
     }
@@ -76,38 +54,28 @@ export class AuthEmailService {
             throw new Error(`Resend could not send the authentication email: ${error.message}`);
         }
     }
-}
 
-function authEmailLayout({
-    eyebrow,
-    title,
-    body,
-    action,
-    fallback
-}: {
-    eyebrow: string;
-    title: string;
-    body: string;
-    action: string;
-    fallback?: string;
-}) {
-    return `<!doctype html>
+    private layout({ title, body, action }: { title: string; body: string; action: string }) {
+        const url = escapeHtml(this.config.webUrl);
+        const label = escapeHtml(this.config.webUrl.replace(/^https?:\/\//, ""));
+
+        return `<!doctype html>
 <html lang="en">
-<body style="margin:0;background:#fafaf9;color:#171717;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <div style="padding:48px 16px">
-    <div style="max-width:520px;margin:0 auto;border:1px solid #e7e5e4;border-radius:20px;background:#ffffff;padding:40px">
-      <p style="margin:0 0 28px;color:#a8a29e;font-size:11px;font-weight:700;letter-spacing:0.22em">${eyebrow}</p>
-      <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:30px;font-weight:500;line-height:1.2">${title}</h1>
-      <p style="margin:0 0 28px;color:#57534e;font-size:15px;line-height:1.7">${body}</p>
-      ${action}
-      ${fallback ? `<p style="margin:28px 0 0;color:#a8a29e;font-size:12px;line-height:1.6">${fallback}</p>` : ""}
-      <div style="margin-top:36px;border-top:1px solid #f0efed;padding-top:20px;color:#a8a29e;font-size:12px;line-height:1.6">
-        If you did not request this, you can safely ignore it.
-      </div>
-    </div>
+<body style="margin:0;background:#ffffff;color:#262626;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:420px;margin:0 auto;padding:56px 24px">
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3">${title}</h1>
+    <p style="margin:0 0 24px;color:#737373;font-size:14px;line-height:1.6">${body}</p>
+    ${action}
+    <p style="margin:24px 0 0;color:#737373;font-size:13px;line-height:1.6">
+      If you did not request this, you can safely ignore this email.
+    </p>
+    <p style="margin:24px 0 0;font-size:13px;line-height:1.6">
+      <a href="${url}" style="color:#737373;text-decoration:underline">${label}</a>
+    </p>
   </div>
 </body>
 </html>`;
+    }
 }
 
 function escapeHtml(value: string) {

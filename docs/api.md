@@ -20,8 +20,8 @@ fetch(`${apiUrl}/documents`, { credentials: "include" });
 `getSession()`, throws `401 UNAUTHORIZED` when no session exists, and uses the
 session's user ID as the owner ID for every subsequent query.
 
-Better Auth is mounted at `/api/auth`. Its magic-link, email-OTP, session,
-account, subscription, portal, and webhook endpoints are consumed through the
+Better Auth is mounted at `/api/auth`. Its email-OTP, session, account,
+subscription, portal, and webhook endpoints are consumed through the
 typed client in `apps/web/src/lib/auth-client.ts` rather than handwritten
 browser requests.
 
@@ -169,17 +169,14 @@ The server mounts Better Auth at `/api/auth`. The installed plugins add:
 
 | Capability | Server path |
 | --- | --- |
-| Request a magic link | `POST /api/auth/sign-in/magic-link` |
-| Verify a magic link | `GET /api/auth/magic-link/verify` |
 | Request an email OTP | `POST /api/auth/email-otp/send-verification-otp` |
 | Sign in with an OTP | `POST /api/auth/sign-in/email-otp` |
 | Read the current session | `GET /api/auth/get-session` |
 | Sign out | `POST /api/auth/sign-out` |
 | Delete the current account | `POST /api/auth/delete-user` |
 
-Magic links and OTPs expire after ten minutes. OTP verification permits five
-attempts. Production rate limiting applies stricter plugin rules to link and
-code endpoints.
+OTPs expire after ten minutes and verification permits five attempts.
+Requests for a new OTP are limited to one per 60 seconds.
 
 ## Billing and Stripe webhooks
 

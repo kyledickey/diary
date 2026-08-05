@@ -22,10 +22,10 @@ Better Auth to resolve the session from the request headers. The user ID comes
 from the database-backed session, never from a caller-controlled header, body,
 or query parameter.
 
-Magic-link tokens and six-digit OTPs are stored hashed and expire after ten
-minutes. OTP verification permits five attempts. In production, Better Auth's
-rate limiter and the plugins' stricter per-endpoint rules are active. Origin and
-CSRF checks remain enabled; only `WEB_URL` is trusted. Production forces secure
+Six-digit OTPs are stored hashed and expire after ten minutes. OTP verification
+permits five attempts, and OTP requests are limited to one per 60 seconds.
+Better Auth's rate limiter is active in every environment. Origin and CSRF
+checks remain enabled; only `WEB_URL` is trusted. Production forces secure
 cookies. Sessions expire after 30 days and are refreshed at most once per day.
 
 ## Ownership

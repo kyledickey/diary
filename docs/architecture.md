@@ -94,10 +94,10 @@ See [the API reference](./api.md) for the endpoint list and error envelope.
 
 Better Auth is mounted at `/api/auth` and uses the Drizzle adapter:
 
-1. The browser requests a magic link, or a six-digit email OTP as fallback.
+1. The browser requests a six-digit email OTP.
 2. `AuthEmailService` sends the message through Resend. Verification values are
    hashed in PostgreSQL and expire after ten minutes.
-3. A valid link or code verifies the email and creates a database session.
+3. A valid code verifies the email and creates a database session.
 4. Better Auth returns an HTTP-only cookie. Subsequent document requests send
    that cookie with `credentials: "include"`.
 

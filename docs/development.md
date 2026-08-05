@@ -152,7 +152,7 @@ first; the union is closed, so `trackAnalytics` will not typecheck otherwise.
 | --- | --- |
 | API exits at startup with a Zod error | A required variable is missing or malformed. See [Configuration](./configuration.md). |
 | Auth email returns an error | `RESEND_API_KEY`, the verified sender domain, or `AUTH_EMAIL_FROM` is incorrect |
-| Magic link redirects to the wrong host | `API_URL`, `WEB_URL`, or the browser's callback origin is incorrect |
+| Authentication requests target the wrong host | `VITE_API_URL`, `API_URL`, or `WEB_URL` is incorrect |
 | Stripe checkout or portal fails | Stripe credentials, Plus price, or webhook configuration is missing or mismatched |
 | Every browser request fails CORS | `WEB_URL` on the API does not match the origin the browser loaded |
 | Requests return 401 despite signing in | The browser omitted credentials, cookies are blocked, or API/web origins are misconfigured |

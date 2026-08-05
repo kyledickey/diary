@@ -37,7 +37,7 @@ There is no `plan` column on `users`; entitlement is derived from
 | --- | --- | --- |
 | `sessions` | token, expiry, IP, user agent, `user_id` | Server-managed login sessions; deleting a user cascades them |
 | `accounts` | provider/account IDs, tokens, `user_id` | Better Auth provider identity records and future provider support |
-| `verifications` | identifier, hashed value, expiry | Single-use magic-link and email-OTP challenges |
+| `verifications` | identifier, hashed value, expiry | Single-use email-OTP challenges |
 
 Session tokens are unique. Indexes on `sessions.user_id`, `accounts.user_id`,
 and `verifications.identifier` serve the common auth lookups.

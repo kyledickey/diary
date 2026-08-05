@@ -17,8 +17,8 @@ is scoped to the signed-in owner, and the writing surface is deliberately plain
   so you never press save.
 - **Encrypted at rest** — entry content is stored as AES-256-GCM ciphertext, so
   a database dump contains no readable text.
-- **Passwordless accounts** through Better Auth and Resend, with magic links
-  and a one-time-code fallback. Stripe powers the optional Plus plan.
+- **Passwordless accounts** through Better Auth and Resend, using six-digit
+  email codes. Stripe powers the optional Plus plan.
 - **Light and dark themes**, server-side rendering, and a mobile layout.
 
 ## Tech stack
@@ -123,7 +123,7 @@ curl http://localhost:8080/health
 # {"status":"ok","timestamp":"..."}
 ```
 
-Sign up at `http://localhost:3000` using a magic link or one-time code, then
+Sign up at `http://localhost:3000` using a one-time email code, then
 create an entry and type into it — the header shows "Saving" and settles on
 "Edited …". The generated API reference is at
 `http://localhost:8080/openapi`.

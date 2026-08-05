@@ -35,7 +35,7 @@ before touching the filesystem. In development Vite handles all of this.
 | `/changelog` | `PolicyPage` | Renders the repository `CHANGELOG.md` |
 | `/privacy` | `PolicyPage` | Renders `src/policies/privacy.md` |
 | `/terms` | `PolicyPage` | Renders `src/policies/terms.md` |
-| `/sign-in` | `AuthPage` | Magic-link sign-in with email OTP fallback |
+| `/sign-in` | `AuthPage` | Passwordless sign-in with a six-digit email code |
 | `/sign-up` | `AuthPage` | Passwordless account creation with the same UI |
 
 `PolicyPage` imports Markdown with Vite's `?raw` suffix and renders it through
@@ -54,8 +54,8 @@ request uses `credentials: "include"`, throws `ApiClientError` with the API's
 status and code on failure, and parses success responses through the matching
 `@diary/contracts` schema.
 
-`src/lib/auth-client.ts` configures the Better Auth React client with magic-link,
-email-OTP, and Stripe client plugins. It points at `VITE_API_URL` and also sends
+`src/lib/auth-client.ts` configures the Better Auth React client with email-OTP
+and Stripe client plugins. It points at `VITE_API_URL` and also sends
 credentials on every request.
 
 `src/features/<domain>/queries.ts` wraps that client in TanStack Query:

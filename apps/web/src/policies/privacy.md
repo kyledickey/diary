@@ -18,7 +18,7 @@ We collect the following types of information from users:
 We use the collected information for the following purposes:
 
 -   **Notifications:** Using email to send notifications.
--   **Authentication:** Using email magic links and one-time codes for user authentication.
+-   **Authentication:** Using one-time email codes for user authentication.
 -   **Billing:** Using billing information for processing payments.
 -   **Marketing:** Using email for marketing purposes.
 

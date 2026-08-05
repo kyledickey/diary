@@ -118,7 +118,7 @@ Enable public networking for `api` and `web` by generating a Railway domain.
 **Generate the API domain first** — `VITE_API_URL` must resolve while the web
 image builds. When you later move to custom domains, update `API_URL`,
 `WEB_URL`, and `VITE_API_URL`, and redeploy the web service so the new API URL
-is baked in and new magic links use the correct host.
+is baked into the browser client.
 
 ### Migrations
 
@@ -135,7 +135,7 @@ A failing migration fails the deployment and the previous version keeps serving.
 2. Point Stripe at `https://<api-domain>/api/auth/stripe/webhook` and set the
    resulting `STRIPE_WEBHOOK_SECRET`.
 3. Check `GET https://<api-domain>/health`.
-4. Request a magic link and complete sign-in; confirm `users` and `sessions`
+4. Request an email code and complete sign-in; confirm `users` and `sessions`
    rows appear.
 5. Start a Plus checkout in Stripe test mode, then confirm the webhook creates
    an active or trialing `subscriptions` row and `/billing` opens the portal.

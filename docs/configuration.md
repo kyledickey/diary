@@ -23,7 +23,7 @@ the first request.
 | `API_URL` | no | `http://localhost:8080` | Public API origin and Better Auth base URL. A trailing slash is stripped. |
 | `BETTER_AUTH_SECRET` | **yes** | — | High-entropy signing secret with at least 32 characters. Keep it stable between deployments. |
 | `RESEND_API_KEY` | **yes** | — | Server-side Resend credential used for passwordless authentication email. |
-| `AUTH_EMAIL_FROM` | no | `Diary <auth@mail.kyle.so>` | Verified sender used for magic links and one-time codes. |
+| `AUTH_EMAIL_FROM` | no | `Diary <auth@mail.kyle.so>` | Verified sender used for one-time sign-in codes. |
 | `ENCRYPTION_KEY` | **yes** | — | Secret for entry content encryption. See [Security](./security.md#entry-encryption). |
 | `STRIPE_SECRET_KEY` | **yes** | — | Stripe API credential. |
 | `STRIPE_PLUS_PRICE_ID` | **yes** | — | Recurring price used by the Better Auth `plus` subscription plan. |
@@ -80,8 +80,7 @@ These must agree or authentication and billing break:
 - `WEB_URL` (API) must be the origin the browser actually loads, or CORS
   rejects every request.
 - `VITE_API_URL` (web build) must be the API's public URL.
-- `API_URL` must be the public origin that serves `/api/auth`; magic-link URLs
-  are generated from it.
+- `API_URL` must be the public origin that serves `/api/auth`.
 - `BETTER_AUTH_SECRET` must be identical across every API instance.
 - `AUTH_EMAIL_FROM` must use a domain verified by the configured Resend account.
 - Stripe must send webhooks to `${API_URL}/api/auth/stripe/webhook` using the

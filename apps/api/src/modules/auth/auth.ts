@@ -14,7 +14,7 @@ import {
     verifications
 } from "@diary/database";
 import { betterAuth } from "better-auth";
-import { emailOTP, magicLink } from "better-auth/plugins";
+import { emailOTP } from "better-auth/plugins";
 import Stripe from "stripe";
 import type { Env } from "../../config/env";
 import { AuthEmailService } from "./email";
@@ -41,7 +41,8 @@ const databaseSchema = {
 export function createAuth(db: Database, env: Env) {
     const email = new AuthEmailService({
         apiKey: env.resendApiKey,
-        from: env.auth.emailFrom
+        from: env.auth.emailFrom,
+        webUrl: env.webUrl
     });
     const stripeClient = new Stripe(env.stripe.secretKey, {
         apiVersion: "2026-07-29.dahlia",
@@ -70,6 +71,15 @@ export function createAuth(db: Database, env: Env) {
             expiresIn: 60 * 60 * 24 * 30,
             updateAge: 60 * 60 * 24
         },
+        rateLimit: {
+            enabled: true,
+            customRules: {
+                "/email-otp/send-verification-otp": {
+                    window: 60,
+                    max: 1
+                }
+            }
+        },
         user: {
             additionalFields: {
                 username: {
@@ -89,11 +99,6 @@ export function createAuth(db: Database, env: Env) {
             }
         },
         plugins: [
-            magicLink({
-                expiresIn: 60 * 10,
-                storeToken: "hashed",
-                sendMagicLink: ({ email: address, url }) => email.sendMagicLink(address, url)
-            }),
             emailOTP({
                 expiresIn: 60 * 10,
                 otpLength: 6,

@@ -7,7 +7,7 @@ part of normal setup or operation; new deployments should follow
 The migration preserves every existing user ID so `documents.owner_id` remains
 valid. Password hashes and sessions are intentionally not transferred. After
 cutover, users enter the email already associated with their account and sign
-in through a Resend magic link or the email-code fallback.
+in with the six-digit code sent through Resend.
 
 ## What the command changes
 
@@ -98,18 +98,35 @@ canceledLegacyFreeSubscriptions
 Do not remove the export until those counts have been reviewed. The migration
 does not require a PostgreSQL backup as part of this cutover plan.
 
+### Test the cutover in beta
+
+Keep the Clerk export at `clerk-export.csv` in the repository root. The file is
+ignored by Git because it contains credential fields even though Diary does not
+import them. With beta's public PostgreSQL URL, run:
+
+```bash
+bun run test:migrate:clerk -- "<BETA_DB_URL>" --confirm-beta --rerun
+```
+
+The test runner validates the CSV, executes the real importer twice to check
+idempotency, and verifies imported IDs and emails, the Drizzle migration
+journal, document ownership, and subscription ownership. If the beta database
+contains Stripe customer IDs, the runner requires a test-mode Stripe key and
+refuses a live key. After it passes, verify OTP sign-in manually with an
+imported email.
+
 ## 4. Verify before directing traffic
 
 1. Confirm the imported user count matches the CSV.
 2. Confirm existing document owners still join to `users.id`.
-3. Request a magic link for an imported email and open an existing entry.
-4. Request and verify the six-digit OTP fallback.
-5. Confirm an existing Plus user has an active or trialing `plus`
+3. Request and verify a six-digit OTP for an imported email, then open an
+   existing entry.
+4. Confirm an existing Plus user has an active or trialing `plus`
    subscription row and retains Plus behavior.
-6. Open `/billing` and confirm Stripe's customer portal loads.
-7. Complete a test Plus checkout and confirm the new webhook updates
+5. Open `/billing` and confirm Stripe's customer portal loads.
+6. Complete a test Plus checkout and confirm the new webhook updates
    `subscriptions`.
-8. Confirm a free user has no recurring free subscription.
+7. Confirm a free user has no recurring free subscription.
 
 After these checks, remove the old provider's runtime secrets and webhooks and
 revoke them in its dashboard. Keep this guide and the importer until the branch

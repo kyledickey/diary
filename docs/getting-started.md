@@ -96,8 +96,8 @@ curl http://localhost:8080/health
 
 Then:
 
-1. Open <http://localhost:3000> and request a magic link.
-2. Follow the link from Resend, or use the six-digit email-code fallback.
+1. Open <http://localhost:3000> and request a six-digit email code.
+2. Enter the code sent through Resend.
 3. Confirm a user and session row exist in PostgreSQL.
 4. Go to `/entry`, choose **New Entry**, and type. The header switches to
    "Saving" and back to "Edited …" once the debounced autosave succeeds.
