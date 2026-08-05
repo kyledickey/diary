@@ -1,8 +1,8 @@
 import type { VariantProps } from "class-variance-authority";
 import { authClient } from "@/lib/auth-client";
-import AccountDropdown from "./account-dropdown";
-import Link from "./link";
-import { Button, type buttonVariants } from "./ui/button";
+import AccountDropdown from "@/components/account/account-dropdown";
+import Link from "@/components/shared/link";
+import { Button, type buttonVariants } from "@/components/ui/button";
 
 interface NavbarProps {
     active?: "home" | "pricing" | "sign-up" | "sign-in";
@@ -13,7 +13,7 @@ export default function Navbar({ active }: NavbarProps) {
     const isSignedIn = Boolean(session.data?.user);
 
     return (
-        <nav className="bg-card/20 sticky top-4 z-50 flex w-fit items-center justify-between rounded-full border p-1 shadow-md backdrop-blur-[5px]">
+        <nav className="bg-card/80 sticky top-4 z-50 flex w-it items-center rounded-full border p-1 shadow-md backdrop-blur-md">
             <div className="flex items-center gap-1 sm:gap-2">
                 <NavbarButton href="/home" active={active === "home"}>
                     About
@@ -24,7 +24,10 @@ export default function Navbar({ active }: NavbarProps) {
 
                 {isSignedIn ? (
                     <>
-                        <NavbarButton href="/entry">Write</NavbarButton>
+                        <NavbarButton href="/entry" variant="default">
+                            Write
+                        </NavbarButton>
+                        <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border" />
                         <AccountDropdown variant="navbar" />
                     </>
                 ) : (
@@ -57,12 +60,12 @@ function NavbarButton({ href, children, active, variant = "ghost" }: NavbarButto
     return (
         <Button
             variant={active ? "secondary" : variant}
-            asChild
+            render={<Link href={href} />}
             className={`h-fit rounded-full px-4 py-1 text-[14px] ${
                 active ? "font-serif font-bold" : ""
             }`}
         >
-            <Link href={href}>{children}</Link>
+            {children}
         </Button>
     );
 }

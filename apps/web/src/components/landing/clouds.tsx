@@ -1,6 +1,5 @@
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
-// Four cartoon shapes so no two clouds in the sky look alike.
 const SHAPES = [
     "M25 55a15 15 0 0 1 0-30 20 20 0 0 1 38-8 17 17 0 0 1 17 17 11 11 0 0 1-8 21z",
     "M10 50a12 12 0 0 1 4-23 15 15 0 0 1 24-9 14 14 0 0 1 21 6 13 13 0 0 1 13 12 10 10 0 0 1-8 14z",
@@ -8,8 +7,7 @@ const SHAPES = [
     "M16 52a13 13 0 0 1 6-25 22 22 0 0 1 40-6 15 15 0 0 1 14 14 11 11 0 0 1-6 17z"
 ];
 
-// Clouds start out in the margins beside the content column. Drift keeps them moving, sway and
-// rise run on their own clocks so the loops never line up and the sky never looks staged.
+// Independent timings keep the cloud loops from syncing up.
 const CLOUDS = [
     {
         top: "12%",
@@ -114,7 +112,7 @@ function FloatingCloud({
     scrollY: ReturnType<typeof useScroll>["scrollY"];
 }) {
     const reduceMotion = useReducedMotion();
-    // The further back a cloud sits, the less the page scroll moves it.
+    // Distant clouds move less on scroll.
     const parallax = useTransform(scrollY, (value) => value * -cloud.depth);
 
     return (

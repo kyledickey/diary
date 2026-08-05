@@ -1,7 +1,7 @@
 import GitHubIcon from "@/../public/icons/github.svg?react";
 import TwitterIcon from "@/../public/icons/twitter.svg?react";
 import { useAnalytics } from "@/lib/analytics";
-import Link from "./link";
+import Link from "@/components/shared/link";
 
 export default function Footer() {
     const track = useAnalytics();
