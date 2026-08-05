@@ -4,7 +4,7 @@ import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { Compartment } from "@codemirror/state";
 import { drawSelection, EditorView, keymap, placeholder } from "@codemirror/view";
 import type { DocumentMetadata } from "@diary/contracts";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { toggleMarkdownMark } from "@/lib/markdown-formatting";
 import { createMarkdownEditorTheme, markdownLivePreview } from "@/lib/markdown-live-preview";
 
@@ -29,7 +29,7 @@ export default function Editor({ content, setContent, isBlurred, metadata }: Edi
     const initialMetadataRef = useRef(metadata);
     onChangeRef.current = setContent;
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!containerRef.current) {
             return;
         }
