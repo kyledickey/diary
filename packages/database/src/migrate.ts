@@ -17,11 +17,7 @@ export async function runMigrations(
     }
 }
 
-/**
- * Compose originally initialized Diary from 0000 without Drizzle's migration
- * journal. Record that migration when its complete schema is already present so
- * the Better Auth cutover can safely apply only the migrations that follow it.
- */
+/** Baseline Compose databases created before Drizzle tracked migrations. */
 export async function baselineLegacySchema(
     databaseUrl: string,
     migrationsFolder = fileURLToPath(new URL("../drizzle", import.meta.url))
