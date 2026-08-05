@@ -2,19 +2,60 @@
 
 ## Unreleased
 
+### Added
+
+-   Add passwordless sign-in and sign-up with six-digit email codes delivered
+    through Resend, including resend cooldowns and a refreshed authentication
+    flow.
+-   Add a redesigned account menu and settings dialog for plan details, billing
+    links, theme selection, sign-out, and permanent account deletion.
+-   Add a responsive entries menu that groups entries by month, supports
+    pinning, and provides a focused empty state for starting the first entry.
+-   Add a Clerk CSV migration command and beta test runner that preserve user
+    IDs, document ownership, Stripe customers, and Plus subscriptions.
+-   Add a deployment guide for cutting existing Clerk installations over to
+    Better Auth and Resend.
+
 ### Changed
 
--   Replace Clerk with Better Auth using Resend magic links and an email OTP
-    fallback, backed by HTTP-only database sessions.
+-   Replace Clerk with Better Auth and HTTP-only, database-backed sessions
+    shared directly between the web app and API.
 -   Modernize Stripe billing around Better Auth's Stripe plugin and Stripe SDK
     22, with PostgreSQL as the subscription entitlement source of truth.
--   Add a one-command Clerk CSV importer that preserves user IDs and existing
-    document ownership while reconciling Stripe subscriptions.
+-   Rebuild the web interface on coss and Base UI with Tailwind CSS 4, updated
+    design tokens, accessible overlays and controls, and responsive behavior.
+-   Redesign the document editor with a quieter autosave indicator, a wider
+    writing surface, inline title editing for Plus users, controls that fade
+    while typing, and consolidated typography, privacy, entry details, and
+    deletion controls.
+-   Make rendered Markdown links interactive with `Cmd/Ctrl`-click while
+    keeping unsafe URL schemes non-clickable.
+-   Refresh the landing, pricing, billing, policy, error, and entry pages to
+    match the new application shell and component system.
+-   Move database setup to checked-in Drizzle migrations and automatically
+    recognize legacy Compose databases that predate the migration journal.
+-   Update local development, Docker, deployment, architecture, API, security,
+    data model, and migration documentation for the new auth, billing, database,
+    and web application flows.
+
+### Fixed
+
+-   Handle existing Diary databases that have the original tables but no
+    Drizzle migration table without attempting to recreate their schema.
+
+### Security
+
+-   Hash one-time sign-in codes at rest, limit them to five attempts and a
+    ten-minute lifetime, and rate-limit code delivery to once per minute.
+-   Use secure, HTTP-only cookies in production with trusted-origin and CSRF
+    checks at the Better Auth boundary.
 
 ### Removed
 
 -   Remove Clerk runtime dependencies, middleware, webhooks, bearer-token
     plumbing, and free-plan Stripe subscriptions for new users.
+-   Remove the legacy sidebar, standalone feedback dialog, Product Hunt embed,
+    and superseded shadcn/Radix UI implementations.
 
 ## [v1.1.0](https://github.com/kyledickey/diary/releases/tag/v1.1.0) - July 27, 2026
 
