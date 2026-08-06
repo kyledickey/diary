@@ -13,10 +13,13 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { OTPField, OTPFieldInput } from "@/components/ui/otp-field";
 import { authClient } from "@/lib/auth-client";
 
 type AuthStep = "email" | "otp";
 const resendCooldownSeconds = 60;
+const otpLength = 6;
+const otpSlotKeys = Array.from({ length: otpLength }, (_, index) => `otp-slot-${index}`);
 
 export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
     const [email, setEmail] = useState("");
@@ -123,23 +126,31 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                             </Form>
                         ) : step === "otp" ? (
                             <Form className="flex flex-col gap-4" onSubmit={verifyOtp}>
-                                <Field name="otp">
-                                    <FieldLabel>One-time code</FieldLabel>
-                                    <Input
+                                <Field className="items-center" name="otp">
+                                    <OTPField
+                                        aria-label="One-time code"
                                         name="otp"
-                                        type="text"
+                                        length={otpLength}
                                         inputMode="numeric"
                                         autoComplete="one-time-code"
-                                        pattern="[0-9]{6}"
-                                        maxLength={6}
-                                        className="text-center font-mono text-xl tracking-[0.35em]"
+                                        className="w-full justify-center gap-2 min-[400px]:gap-3"
                                         value={otp}
-                                        onChange={(event) =>
-                                            setOtp(event.target.value.replace(/\D/g, ""))
-                                        }
+                                        onValueChange={setOtp}
                                         required
-                                        autoFocus
-                                    />
+                                    >
+                                        {otpSlotKeys.map((slotKey, index) => (
+                                            <OTPFieldInput
+                                                key={slotKey}
+                                                className="size-10 text-lg leading-10 min-[400px]:size-12 min-[400px]:text-xl min-[400px]:leading-12 sm:size-12 sm:text-xl sm:leading-12"
+                                                aria-label={
+                                                    index === 0
+                                                        ? undefined
+                                                        : `Character ${index + 1} of ${otpLength}`
+                                                }
+                                                autoFocus={index === 0}
+                                            />
+                                        ))}
+                                    </OTPField>
                                 </Field>
                                 <Button
                                     className="w-full"
@@ -159,6 +170,7 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                         {step === "otp" ? (
                             <Button
                                 className="mt-2 w-full"
+                                type="button"
                                 variant="ghost"
                                 onClick={() => sendOtp()}
                                 disabled={isPending || resendCooldown > 0}
@@ -171,6 +183,7 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
                         {step === "otp" ? (
                             <Button
                                 className="w-full"
+                                type="button"
                                 variant="ghost"
                                 onClick={() => {
                                     setOtp("");
