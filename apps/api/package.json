@@ -23,7 +23,7 @@
         "@diary/database": "workspace:*",
         "@elysia/cors": "1.4.2",
         "@elysia/openapi": "1.4.15",
-        "better-auth": "1.6.25",
+        "better-auth": "1.7.7",
         "csv-parse": "7.0.1",
         "drizzle-orm": "0.45.2",
         "elysia": "1.4.29",
