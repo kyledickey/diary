@@ -17,7 +17,7 @@
         "db:studio": "bun --filter @diary/database db:studio"
     },
     "dependencies": {
-        "@better-auth/drizzle-adapter": "1.6.25",
+        "@better-auth/drizzle-adapter": "1.7.7",
         "@better-auth/stripe": "1.6.25",
         "@diary/contracts": "workspace:*",
         "@diary/database": "workspace:*",
