@@ -19,8 +19,8 @@ COPY CHANGELOG.md CHANGELOG.md
 COPY apps/web apps/web
 COPY packages packages
 
-RUN test -n "${VITE_API_URL}"
-RUN bun --filter @diary/web build
+RUN --mount=type=secret,id=VITE_API_URL,env=VITE_API_URL \
+    test -n "${VITE_API_URL}" && bun --filter @diary/web build
 
 FROM dependencies AS production-dependencies
 RUN bun install --frozen-lockfile --production
